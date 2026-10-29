@@ -195,9 +195,17 @@ function bindSocketEvents() {
   const { socket } = S;
 
   socket.on('lobby_update', state => {
-    if (state.phase === 'LOBBY') {
+    if (!state.isGameStarted) {
       showScreen('lobby');
       renderLobby(state);
+    }
+  });
+
+  socket.on('state_update', gameState => {
+    S.gameState = gameState;
+    if (gameState.phase !== 'NOT_STARTED') {
+      showScreen('game');
+      renderGame(gameState);
     }
   });
 
@@ -259,9 +267,11 @@ function bindUIEvents() {
     socket.emit('create_room', { nickname }, res => {
       if (!res.success) { toast(res.error, true); return; }
       handleJoinSuccess(res, nickname);
-      // Auto-add 3 bots for a 4-player game
-      socket.emit('add_bot', {}, () => {
-        socket.emit('add_bot', {}, () => {
+      // Auto-add 3 bots sequentially
+      socket.emit('add_bot', {}, res1 => {
+        if (!res1?.success) return;
+        socket.emit('add_bot', {}, res2 => {
+          if (!res2?.success) return;
           socket.emit('add_bot', {});
         });
       });
@@ -457,6 +467,9 @@ function renderLobby(state) {
     btnStartGame.textContent = canStart
       ? `Start Game (${state.players.length} players)`
       : `Need at least 3 players (${state.players.length}/3)`;
+    if (btnAddBot) {
+      btnAddBot.disabled = state.players.length >= (state.rules?.maxPlayers || 8);
+    }
   } else {
     btnStartGame.disabled    = true;
     btnStartGame.textContent = 'Waiting for host to start…';
