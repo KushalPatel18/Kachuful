@@ -22,8 +22,9 @@ export const ROUND_SEQUENCES = {
 };
 
 export const TRUMP_SELECTION = {
-  TURN_UP: 'turn_up', // Turn top card of remaining deck
-  ROTATION: 'rotation', // Fixed suit rotation e.g. Spades, Diamonds, Clubs, Hearts, No-Trump
+  TURN_UP: 'turn_up', // The card which reveal first is the trump card (turn up top card)
+  ROTATION: 'rotation', // Fixed trump card (♠ ♦ ♣ ♥ NT)
+  FIXED_ROTATION: 'fixed_rotation', // Alias for rotation
   NO_TRUMP_LAST: 'no_trump_last' // Turn-up, except last round of max cards is No Trump
 };
 
@@ -36,17 +37,25 @@ export const FIXED_ROTATION_SUITS = ['S', 'D', 'C', 'H', 'NT'];
  */
 export function getGameConfig(customOptions = {}, playerCount = 4) {
   const maxPossibleCards = Math.floor(52 / playerCount);
-  const maxCardsCap = customOptions.maxCardsCap
-    ? Math.min(customOptions.maxCardsCap, maxPossibleCards)
-    : maxPossibleCards;
+  let maxCardsCap = maxPossibleCards;
+  if (customOptions.maxCardsCap !== undefined) {
+    maxCardsCap = Math.min(Number(customOptions.maxCardsCap), maxPossibleCards);
+  } else {
+    // Default to max possible unless specified
+    maxCardsCap = maxPossibleCards;
+  }
+
+  // Normalize trumpSelection
+  let trumpSelection = customOptions.trumpSelection || TRUMP_SELECTION.ROTATION;
+  if (trumpSelection === 'fixed_rotation') trumpSelection = TRUMP_SELECTION.ROTATION;
 
   return {
     minPlayers: 3,
     maxPlayers: 8,
-    biddingRestriction: customOptions.biddingRestriction !== undefined ? customOptions.biddingRestriction : true,
+    biddingRestriction: customOptions.biddingRestriction !== undefined ? !!customOptions.biddingRestriction : true,
     scoringMode: customOptions.scoringMode || SCORING_MODES.STANDARD,
     roundSequence: customOptions.roundSequence || ROUND_SEQUENCES.UP_DOWN,
-    trumpSelection: customOptions.trumpSelection || TRUMP_SELECTION.TURN_UP,
+    trumpSelection,
     maxCardsCap,
     // Custom scoring formula hook if user specifies a custom function
     calculateScore: customOptions.customScoringFn || null

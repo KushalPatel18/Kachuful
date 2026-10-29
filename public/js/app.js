@@ -49,11 +49,10 @@ const lobbyRoomCode    = $('lobby-room-code');
 const lobbyPlayerCount = $('lobby-player-count');
 const lobbyPlayerList  = $('lobby-player-list');
 const btnStartGame     = $('btn-start-game');
+const btnAddBot        = $('btn-add-bot');
 const formRules        = $('form-rules');
-const ruleSequence     = $('rule-sequence');
 const ruleMaxCards     = $('rule-max-cards');
 const ruleTrump        = $('rule-trump');
-const ruleScoring      = $('rule-scoring');
 const ruleBiddingRestriction = $('rule-bidding-restriction');
 
 // Table Arena
@@ -254,6 +253,31 @@ function bindUIEvents() {
     });
   });
 
+  // Play with bots: create room and automatically add 3 bots
+  $('btn-play-bots').addEventListener('click', () => {
+    const nickname = inputNickname.value.trim() || 'Player';
+    socket.emit('create_room', { nickname }, res => {
+      if (!res.success) { toast(res.error, true); return; }
+      handleJoinSuccess(res, nickname);
+      // Auto-add 3 bots for a 4-player game
+      socket.emit('add_bot', {}, () => {
+        socket.emit('add_bot', {}, () => {
+          socket.emit('add_bot', {});
+        });
+      });
+    });
+  });
+
+  // Add Bot button inside lobby
+  if (btnAddBot) {
+    btnAddBot.addEventListener('click', () => {
+      if (!S.isHost) return;
+      socket.emit('add_bot', {}, res => {
+        if (res && !res.success) toast(res.error, true);
+      });
+    });
+  }
+
   $('btn-join-room').addEventListener('click', () => {
     const nickname = inputNickname.value.trim();
     const roomCode = inputRoomCode.value.trim().toUpperCase();
@@ -312,18 +336,16 @@ function bindUIEvents() {
     if (!S.isHost) return;
     socket.emit('update_rules', {
       rules: {
-        roundSequence:      ruleSequence.value,
+        roundSequence:      'up_down',
         maxCardsCap:        parseInt(ruleMaxCards.value, 10),
         trumpSelection:     ruleTrump.value,
-        scoringMode:        ruleScoring.value,
+        scoringMode:        'standard',
         biddingRestriction: ruleBiddingRestriction.checked
       }
     });
   };
-  ruleSequence.addEventListener('change', emitRules);
   ruleMaxCards.addEventListener('change', emitRules);
   ruleTrump.addEventListener('change', emitRules);
-  ruleScoring.addEventListener('change', emitRules);
   ruleBiddingRestriction.addEventListener('change', emitRules);
 
   btnStartGame.addEventListener('click', () => {
@@ -383,11 +405,12 @@ function renderLobby(state) {
 
   const fields = formRules.querySelectorAll('input, select');
   fields.forEach(el => { el.disabled = !S.isHost; });
+  if (btnAddBot) {
+    btnAddBot.style.display = S.isHost ? 'inline-flex' : 'none';
+  }
   if (state.rules) {
-    ruleSequence.value             = state.rules.roundSequence  || 'up_down';
-    ruleMaxCards.value             = state.rules.maxCardsCap    || 13;
-    ruleTrump.value                = state.rules.trumpSelection || 'turn_up';
-    ruleScoring.value              = state.rules.scoringMode    || 'standard';
+    ruleMaxCards.value             = String(state.rules.maxCardsCap || 8);
+    ruleTrump.value                = state.rules.trumpSelection || 'rotation';
     ruleBiddingRestriction.checked = !!state.rules.biddingRestriction;
   }
 
@@ -397,8 +420,34 @@ function renderLobby(state) {
     li.className = `roster-item${p.id === S.playerId ? ' is-me' : ''}`;
     const dot  = `<span class="status-dot ${p.connected ? 'status-online' : 'status-offline'}"></span>`;
     const host = p.isHost ? '<span class="badge-host">HOST</span>' : '';
+    const botBadge = p.isBot ? '<span class="badge-bot">BOT</span>' : '';
     const me   = p.id === S.playerId ? ' (You)' : '';
-    li.innerHTML = `<div style="display:flex;align-items:center">${dot}<span>${i+1}. <strong>${html(p.name)}</strong>${me}</span></div>${host}`;
+    const kickBtn = (S.isHost && p.isBot) ? `<button class="btn-remove-bot" data-bot-id="${p.id}" title="Remove Bot">×</button>` : '';
+
+    li.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px">
+        ${dot}
+        <span>${i+1}. <strong>${html(p.name)}</strong>${me}</span>
+        ${botBadge}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${host}
+        ${kickBtn}
+      </div>
+    `;
+
+    if (kickBtn) {
+      const removeBtn = li.querySelector('.btn-remove-bot');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          socket.emit('remove_bot', { botId: p.id }, res => {
+            if (res && !res.success) toast(res.error, true);
+          });
+        });
+      }
+    }
+
     lobbyPlayerList.appendChild(li);
   });
 
@@ -594,18 +643,18 @@ function renderOpponentsAroundTable(state) {
     slot.style.top  = `${pos.y}%`;
 
     const isDealer = state.dealer === p.id;
-    const initial  = (p.name || '?').charAt(0).toUpperCase();
+    const initial  = p.isBot ? '🤖' : (p.name || '?').charAt(0).toUpperCase();
     const bidLabel = p.bid !== null ? p.bid : '?';
     const wonLabel = p.tricksWon;
 
     slot.innerHTML = `
       <div class="player-slot-card">
-        <div class="player-avatar-circle">
+        <div class="player-avatar-circle ${p.isBot ? 'avatar-bot' : ''}">
           ${initial}
           ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
         </div>
         <div class="player-info-meta">
-          <span class="player-name-text">${html(p.name)}</span>
+          <span class="player-name-text">${html(p.name)}${p.isBot ? ' 🤖' : ''}</span>
           <span class="player-stats-text">Bid:${bidLabel} · Won:${wonLabel}</span>
         </div>
       </div>

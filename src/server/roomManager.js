@@ -7,6 +7,7 @@
 import { randomBytes } from 'node:crypto';
 import { GameState, GAME_PHASES } from '../game/gameState.js';
 import { getGameConfig } from '../game/config.js';
+import { BOT_NAMES } from '../game/bot.js';
 
 export class Room {
   /**
@@ -21,7 +22,7 @@ export class Room {
     this.lastActivityAt = Date.now();
     this.rules = getGameConfig({}, 4);
 
-    // Array of players: { id: string, name: string, token: string, connected: boolean, socketId: string }
+    // Array of players: { id: string, name: string, token: string, connected: boolean, socketId: string, isBot?: boolean }
     this.players = [];
 
     // Add host as first player
@@ -31,7 +32,8 @@ export class Room {
       name: hostNickname.trim().slice(0, 15),
       token: hostToken,
       connected: true,
-      socketId: hostPlayerId
+      socketId: hostPlayerId,
+      isBot: false
     });
 
     this.game = null; // Instance of GameState when started
@@ -52,7 +54,7 @@ export class Room {
   /**
    * Add a new player to the lobby.
    */
-  addPlayer(socketId, nickname) {
+  addPlayer(socketId, nickname, isBot = false) {
     this.touch();
     const cleanNick = (nickname || 'Player').trim().slice(0, 15);
 
@@ -76,11 +78,54 @@ export class Room {
       name: cleanNick,
       token,
       connected: true,
-      socketId
+      socketId,
+      isBot: !!isBot
     };
     this.players.push(player);
 
     return player;
+  }
+
+  /**
+   * Add a bot player (Host only).
+   */
+  addBot(hostId) {
+    this.touch();
+    if (this.hostId !== hostId) {
+      throw new Error('Only the host can add bots.');
+    }
+    if (this.players.length >= this.rules.maxPlayers) {
+      throw new Error(`Room is full (maximum ${this.rules.maxPlayers} players).`);
+    }
+    // Pick an unused bot name
+    let botName = '';
+    for (const name of BOT_NAMES) {
+      if (!this.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        botName = name;
+        break;
+      }
+    }
+    if (!botName) {
+      botName = `Bot ${this.players.length + 1}`;
+    }
+
+    const botId = `bot_${randomBytes(4).toString('hex')}`;
+    return this.addPlayer(botId, botName, true);
+  }
+
+  /**
+   * Remove a bot player (Host only).
+   */
+  removeBot(hostId, botId) {
+    this.touch();
+    if (this.hostId !== hostId) {
+      throw new Error('Only the host can remove bots.');
+    }
+    const bot = this.getPlayer(botId);
+    if (!bot || !bot.isBot) {
+      throw new Error('Bot not found.');
+    }
+    return this.removePlayer(botId);
   }
 
   /**
@@ -158,7 +203,7 @@ export class Room {
     }
 
     // Initialize GameState with current players
-    const gamePlayers = this.players.map(p => ({ id: p.id, name: p.name }));
+    const gamePlayers = this.players.map(p => ({ id: p.id, name: p.name, isBot: !!p.isBot }));
     this.game = new GameState({
       players: gamePlayers,
       rules: this.rules
@@ -180,7 +225,8 @@ export class Room {
         id: p.id,
         name: p.name,
         connected: p.connected,
-        isHost: p.id === this.hostId
+        isHost: p.id === this.hostId,
+        isBot: !!p.isBot
       }))
     };
   }
@@ -191,12 +237,13 @@ export class Room {
   getPlayerGameState(playerId) {
     if (!this.game) return null;
     const clientState = this.game.getClientState(playerId);
-    // Enrich with connection status from room
+    // Enrich with connection status and bot flag from room
     clientState.players = clientState.players.map(p => {
       const roomP = this.getPlayer(p.id);
       return {
         ...p,
-        connected: roomP ? roomP.connected : false
+        connected: roomP ? roomP.connected : false,
+        isBot: !!(roomP && roomP.isBot)
       };
     });
     clientState.roomCode = this.code;

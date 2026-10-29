@@ -55,7 +55,15 @@
             <div class="actions-split">
               <div class="create-box">
                 <button id="btn-create-room" class="btn btn-primary btn-large">
-                  <span class="btn-icon-lead">👑</span> Create Private Room
+                  <span class="btn-icon-lead">👑</span> Host the Game
+                </button>
+              </div>
+
+              <div class="divider-text"><span>OR PLAY WITH BOTS</span></div>
+
+              <div class="bot-box">
+                <button id="btn-play-bots" class="btn btn-secondary btn-large">
+                  <span class="btn-icon-lead">🤖</span> Play with Bots
                 </button>
               </div>
 
@@ -89,6 +97,7 @@
             <div class="panel players-panel">
               <div class="panel-header">
                 <h3>Players Seated (<span id="lobby-player-count">0</span>/8)</h3>
+                <button type="button" id="btn-add-bot" class="btn btn-sm btn-ghost">+ Add Bot</button>
               </div>
               <ul id="lobby-player-list" class="player-roster"></ul>
             </div>
@@ -102,42 +111,25 @@
 
               <form id="form-rules" class="rules-form">
                 <div class="form-row">
-                  <label for="rule-sequence">Round Sequence</label>
-                  <select id="rule-sequence">
-                    <option value="up_down">Up then Down (1 to Max to 1)</option>
-                    <option value="down_up">Down then Up (Max to 1 to Max)</option>
-                    <option value="up_only">Up Only (1 to Max)</option>
-                    <option value="down_only">Down Only (Max to 1)</option>
-                  </select>
-                </div>
-
-                <div class="form-row">
-                  <label for="rule-max-cards">Max Cards Per Hand</label>
-                  <input type="number" id="rule-max-cards" min="1" max="17" value="13">
-                </div>
-
-                <div class="form-row">
                   <label for="rule-trump">Trump Selection</label>
                   <select id="rule-trump">
-                    <option value="turn_up">Turn Up Top Card</option>
-                    <option value="rotation">Fixed Rotation (♠ ♦ ♣ ♥ NT)</option>
-                    <option value="no_trump_last">Turn Up (No-Trump on Max)</option>
+                    <option value="rotation">Fixed Trump Card (♠ ♦ ♣ ♥ NT)</option>
+                    <option value="turn_up">Card which reveal first is the trump card</option>
                   </select>
                 </div>
 
                 <div class="form-row">
-                  <label for="rule-scoring">Scoring Model</label>
-                  <select id="rule-scoring">
-                    <option value="standard">Standard: 10 + Bid (0 on miss)</option>
-                    <option value="ten_times">10 × Bid (10 for 0-bid)</option>
-                    <option value="diff_penalty">10 + Bid (penalty -|diff| on miss)</option>
+                  <label for="rule-max-cards">Max Round (Max Cards)</label>
+                  <select id="rule-max-cards">
+                    <option value="8">8 Rounds (Max 8)</option>
+                    <option value="10">10 Rounds (Max 10)</option>
                   </select>
                 </div>
 
                 <div class="form-row checkbox-row">
                   <label>
                     <input type="checkbox" id="rule-bidding-restriction" checked>
-                    <span>Dealer Restriction (Total bids ≠ total cards)</span>
+                    <span>One player should lose (Total bids ≠ total cards)</span>
                   </label>
                 </div>
               </form>

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { RoomManager } from './roomManager.js';
 import { GAME_PHASES } from '../game/gameState.js';
+import { calculateBotBid, chooseBotPlay } from '../game/bot.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -55,6 +56,47 @@ export function createServerApp(options = {}) {
     const broadcastLobbyState = (room) => {
       if (!room) return;
       io.to(room.code).emit('lobby_update', room.getLobbyState());
+    };
+
+    // Helper to process bot turn if the current turn belongs to a bot
+    const handleBotTurnIfNeeded = (room) => {
+      if (!room || !room.game) return;
+      const game = room.game;
+      if (game.phase !== GAME_PHASES.BIDDING && game.phase !== GAME_PHASES.PLAYING) {
+        return;
+      }
+
+      const turnPlayerId = game.currentTurnPlayerId;
+      if (!turnPlayerId) return;
+
+      const playerObj = room.getPlayer(turnPlayerId);
+      if (!playerObj || !playerObj.isBot) return;
+
+      // Small delay so moves feel natural and humans can follow
+      setTimeout(() => {
+        try {
+          if (!room.game || room.game.currentTurnPlayerId !== turnPlayerId) return;
+
+          if (game.phase === GAME_PHASES.BIDDING) {
+            const hand = game.hands.get(turnPlayerId) || [];
+            const legalBids = game.getLegalBids(turnPlayerId);
+            const chosenBid = calculateBotBid(hand, game.trumpSuit, legalBids);
+            game.placeBid(turnPlayerId, chosenBid);
+            broadcastGameState(room);
+            handleBotTurnIfNeeded(room);
+          } else if (game.phase === GAME_PHASES.PLAYING) {
+            const hand = game.hands.get(turnPlayerId) || [];
+            const bid = game.bids.get(turnPlayerId) ?? 0;
+            const won = game.tricksWon.get(turnPlayerId) ?? 0;
+            const chosenCard = chooseBotPlay(hand, game.currentTrick, game.trumpSuit, bid, won);
+            game.playCard(turnPlayerId, chosenCard);
+            broadcastGameState(room);
+            handleBotTurnIfNeeded(room);
+          }
+        } catch (err) {
+          console.error(`Bot move error for ${turnPlayerId}:`, err);
+        }
+      }, 700);
     };
 
     // 1. CREATE ROOM
@@ -155,6 +197,32 @@ export function createServerApp(options = {}) {
       }
     });
 
+    // 4b. ADD BOT (Host only)
+    socket.on('add_bot', (data, callback) => {
+      try {
+        const room = roomManager.getRoom(currentRoomCode);
+        if (!room) return callback?.({ success: false, error: 'Room not found.' });
+        room.addBot(currentPlayerId);
+        broadcastLobbyState(room);
+        callback?.({ success: true, lobbyState: room.getLobbyState() });
+      } catch (err) {
+        callback?.({ success: false, error: err.message });
+      }
+    });
+
+    // 4c. REMOVE BOT (Host only)
+    socket.on('remove_bot', ({ botId }, callback) => {
+      try {
+        const room = roomManager.getRoom(currentRoomCode);
+        if (!room) return callback?.({ success: false, error: 'Room not found.' });
+        room.removeBot(currentPlayerId, botId);
+        broadcastLobbyState(room);
+        callback?.({ success: true, lobbyState: room.getLobbyState() });
+      } catch (err) {
+        callback?.({ success: false, error: err.message });
+      }
+    });
+
     // 5. START GAME (Host only)
     socket.on('start_game', (data, callback) => {
       try {
@@ -166,6 +234,7 @@ export function createServerApp(options = {}) {
 
         // Push initial personalized game state to each player
         broadcastGameState(room);
+        handleBotTurnIfNeeded(room);
       } catch (err) {
         callback?.({ success: false, error: err.message });
       }
@@ -180,6 +249,7 @@ export function createServerApp(options = {}) {
         room.game.placeBid(currentPlayerId, bid);
         callback?.({ success: true });
         broadcastGameState(room);
+        handleBotTurnIfNeeded(room);
       } catch (err) {
         callback?.({ success: false, error: err.message });
       }
@@ -194,6 +264,7 @@ export function createServerApp(options = {}) {
         const playResult = room.game.playCard(currentPlayerId, card);
         callback?.({ success: true, result: playResult });
         broadcastGameState(room);
+        handleBotTurnIfNeeded(room);
       } catch (err) {
         callback?.({ success: false, error: err.message });
       }
@@ -212,6 +283,7 @@ export function createServerApp(options = {}) {
           room.game.startNextRound();
           callback?.({ success: true });
           broadcastGameState(room);
+          handleBotTurnIfNeeded(room);
         } else {
           callback?.({ success: false, error: 'Current round is not complete yet.' });
         }
