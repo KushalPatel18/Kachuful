@@ -111,14 +111,6 @@
 
               <form id="form-rules" class="rules-form">
                 <div class="form-row">
-                  <label for="rule-trump">Trump Selection</label>
-                  <select id="rule-trump">
-                    <option value="rotation">Fixed Trump Card (♠ ♦ ♣ ♥ NT)</option>
-                    <option value="turn_up">Card which reveal first is the trump card</option>
-                  </select>
-                </div>
-
-                <div class="form-row">
                   <label for="rule-max-cards">Max Round (Max Cards)</label>
                   <select id="rule-max-cards">
                     <option value="8">8 Rounds (Max 8)</option>
@@ -147,7 +139,7 @@
       <!-- 3. GAMEPLAY SCREEN (Android Judgement Style Oval Table) -->
       <section id="screen-game" class="screen screen-game hidden">
         
-        <!-- Table Arena (Seated Players around Oval Felt Table) -->
+        <!-- Table Arena (Authentic Indian Judgement Oval/Mat Table) -->
         <div class="table-arena" id="table-arena">
           
           <!-- Seated Opponent Slots (Top, Left, Right, etc.) -->
@@ -156,15 +148,8 @@
           <!-- Oval Felt Center -->
           <div class="oval-felt" id="oval-felt">
             
-            <!-- Table HUD (Center Ring badge with Round, Trump, Current Turn) -->
-            <div class="center-pot-hud" id="center-pot-hud">
-              <div class="pot-round" id="hud-round-number">R 1/25</div>
-              <div class="pot-trump" id="hud-trump-container">
-                <span id="hud-trump-suit-icon" class="pot-trump-icon">♦</span>
-                <span id="hud-trump-name" class="pot-trump-name">Diamonds</span>
-              </div>
-              <div class="pot-turn" id="hud-current-turn">Your Turn</div>
-            </div>
+            <!-- Center Turn / Status Pill (e.g. "Playing" / "Your Turn") -->
+            <div class="center-status-badge" id="hud-current-turn">Playing</div>
 
             <!-- Trick Cards Arena (cards thrown onto felt) -->
             <div id="trick-cards-container" class="trick-cards-container"></div>
@@ -172,6 +157,15 @@
             <!-- Trick Winner Popup Animation -->
             <div id="trick-winner-banner" class="trick-winner-banner hidden">
               <span id="trick-winner-text"></span>
+            </div>
+
+            <!-- Bottom-Right Table HUD Pill (Round 5/8 & TRUMP ♠) as in reference -->
+            <div class="table-hud-corner" id="table-hud-corner">
+              <div class="hud-round-pill" id="hud-round-number">Round 1/8</div>
+              <div class="hud-trump-pill" id="hud-trump-container">
+                <span class="hud-trump-tag">TRUMP</span>
+                <span id="hud-trump-suit-icon" class="hud-trump-icon">♠</span>
+              </div>
             </div>
 
             <!-- Bidding Dialog / Tray overlay inside table -->
@@ -193,8 +187,8 @@
 
           </div><!-- /.oval-felt -->
 
-          <!-- Player's Self Badge (bottom of table) -->
-          <div id="player-self-badge" class="player-slot slot-bottom"></div>
+          <!-- Player's Self Badge (bottom-left of table, authentic round avatar) -->
+          <div id="player-self-badge" class="player-slot slot-self"></div>
 
         </div><!-- /.table-arena -->
 

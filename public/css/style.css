@@ -1,37 +1,35 @@
 /* ═══════════════════════════════════════════════════════════════════
-   JUDGEMENT / KACHUFUL — Android App Inspired Theme & Layout
-   Designed for all screens (Mobile Portrait, Mobile Landscape, Tablet, Desktop)
+   JUDGEMENT / KACHUFUL — Authentic Mobile Judgement Theme & Layout
+   Matches uploaded design: Deep blue felt, circular avatars with score & won/bid strips,
+   bottom-right TRUMP + Round HUD, centered Playing badge, red border for first lead card,
+   smooth card throw animations, and fully responsive across mobile & desktop.
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Palette inspired by top mobile card tables */
-  --bg-app:          #0b1610;
-  --table-rail:      #2c1a0e;
-  --table-rail-edge: #422815;
-  --table-felt-1:    #1d603a;
-  --table-felt-2:    #0f3d23;
-  --table-felt-dark: #082916;
+  /* Authentic deep navy/indigo felt from the reference app */
+  --bg-app:          #16203b;
+  --table-bg:        #1e294b;
+  --table-felt:      #192445;
+  --table-felt-edge: #131b34;
   
   --surface:         #ffffff;
-  --surface-alt:     #f4f6f4;
-  --border-light:    #e2e8e0;
-  --border-dark:     #2b5239;
+  --surface-alt:     #f8fafc;
+  --border-light:    #e2e8f0;
   
-  --primary:         #15803d;
-  --primary-hover:   #166534;
-  --primary-tint:    #dcfce7;
+  --primary:         #22c55e;
+  --primary-hover:   #16a34a;
+  --primary-pill:    #22c55e;
   
-  --accent-gold:     #eab308;
-  --accent-gold-dark:#a16207;
-  --accent-gold-bg:  #fef9c3;
+  --accent-gold:     #f59e0b;
+  --accent-gold-dark:#b45309;
   
-  --danger:          #dc2626;
+  --danger:          #ef4444;
   --danger-light:    #fee2e2;
   
-  --text-main:       #111827;
-  --text-muted:      #4b5563;
-  --text-white:      #f9fafb;
-  --text-white-dim:  #9ca3af;
+  --text-main:       #0f172a;
+  --text-muted:      #64748b;
+  --text-white:      #ffffff;
+  --text-white-dim:  #94a3b8;
   
   --radius-card:     6px;
   --radius-pill:     24px;
@@ -40,8 +38,8 @@
   --font-main:       'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:       'JetBrains Mono', monospace;
   
-  --shadow-card:     0 2px 6px rgba(0, 0, 0, 0.35);
-  --shadow-slot:     0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-card:     0 4px 10px rgba(0, 0, 0, 0.4);
+  --shadow-slot:     0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after {
@@ -596,6 +594,7 @@ input:focus, select:focus {
   height: 100%;
   position: relative;
   background: var(--bg-app);
+  overflow: hidden;
 }
 
 /* The Table Arena containing Opponents and Felt */
@@ -606,23 +605,23 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 8px;
+  background: radial-gradient(circle at 50% 45%, #223056 0%, #17223e 70%, #10182d 100%);
 }
 
-/* Authentic Oval Felt Table */
+/* Oval Felt Table */
 .oval-felt {
   position: relative;
-  width: 96%;
-  height: 92%;
-  max-width: 900px;
+  width: 98%;
+  height: 96%;
+  max-width: 920px;
   max-height: 520px;
-  background: radial-gradient(ellipse at center, var(--table-felt-1) 0%, var(--table-felt-2) 65%, var(--table-felt-dark) 100%);
-  border-radius: 120px;
-  border: 10px solid var(--table-rail);
+  background: radial-gradient(ellipse at center, #1f2c50 0%, #192445 70%, #121b33 100%);
+  border-radius: 90px;
+  border: 4px solid rgba(255, 255, 255, 0.06);
   box-shadow: 
-    inset 0 0 40px rgba(0, 0, 0, 0.6),
-    0 0 0 3px var(--table-rail-edge),
-    0 8px 30px rgba(0, 0, 0, 0.7);
+    inset 0 0 60px rgba(0, 0, 0, 0.6),
+    0 8px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -630,9 +629,28 @@ input:focus, select:focus {
 
 @media (max-width: 600px) {
   .oval-felt {
-    border-radius: 60px;
-    border-width: 6px;
+    border-radius: 40px;
+    border-width: 2px;
   }
+}
+
+/* Center Status Badge ("Playing" / "Your Turn") */
+.center-status-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #22c55e;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.88;
 }
 
 /* Table Opponents Layout */
@@ -643,161 +661,202 @@ input:focus, select:focus {
   z-index: 10;
 }
 
-/* Player Seated Slot Badge (Avatars around table) */
+/* Player Avatar Widgets (Circle + Score Badge + Won/Bid Strip + Name) */
 .player-slot {
   position: absolute;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
   transform: translate(-50%, -50%);
   z-index: 12;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
-.player-slot-card {
-  background: rgba(15, 23, 42, 0.88);
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  padding: 4px 10px;
+.player-slot.slot-self {
+  top: auto !important;
+  left: 36px !important;
+  bottom: 8px !important;
+  transform: none !important;
+  z-index: 25;
+}
+
+@media (max-width: 600px) {
+  .player-slot.slot-self {
+    left: 12px !important;
+    bottom: 4px !important;
+    transform: scale(0.9) !important;
+    transform-origin: bottom left;
+  }
+}
+
+.player-avatar-widget {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  box-shadow: var(--shadow-slot);
-  backdrop-filter: blur(4px);
+  position: relative;
+  min-width: 68px;
 }
 
-.player-avatar-circle {
-  width: 32px;
-  height: 32px;
+.avatar-head-circle {
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: #334155;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.82rem;
+  background: var(--avatar-color, #ea580c);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.3);
   position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.player-info-meta {
+.avatar-head-icon {
+  width: 28px;
+  height: 28px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Current score badge on head (circle at top) */
+.avatar-score-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fde047;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 4px;
   display: flex;
-  flex-direction: column;
-  line-height: 1.15;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fde047;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
-.player-name-text {
-  font-size: 0.78rem;
+/* Won / Bid strip (pill below head e.g. 0/0 or 1/5) */
+.avatar-bid-strip {
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 12px;
+  margin-top: -8px;
+  z-index: 2;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
+}
+
+.avatar-bid-strip .won-count {
+  color: #4ade80;
+}
+
+.avatar-bid-strip .bid-count {
+  color: #f8fafc;
+}
+
+.avatar-player-name {
+  font-size: 0.76rem;
   font-weight: 700;
-  color: #fff;
-  max-width: 90px;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  margin-top: 2px;
   white-space: nowrap;
+  max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.player-stats-text {
-  font-size: 0.7rem;
-  color: #cbd5e1;
-  font-family: var(--font-mono);
+  text-align: center;
 }
 
 .dealer-token {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--accent-gold);
+  bottom: -2px;
+  left: -4px;
+  background: #f59e0b;
   color: #000;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   font-weight: 900;
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Active Turn Highlight (Pulsing glow like in Judgement app) */
-.player-slot.is-turn .player-slot-card {
-  border-color: #facc15;
-  background: rgba(30, 41, 59, 0.95);
-  box-shadow: 0 0 14px rgba(250, 204, 21, 0.7);
-  transform: scale(1.05);
+/* Active Turn Highlight (Pulsing glow around avatar) */
+.player-slot.is-turn .avatar-head-circle {
+  border-color: #fde047;
+  box-shadow: 0 0 18px rgba(253, 224, 71, 0.9);
+  transform: scale(1.1);
 }
 
-.player-slot.is-turn .player-avatar-circle {
-  border-color: #facc15;
+.player-slot.is-turn .avatar-bid-strip {
+  border-color: #fde047;
 }
 
-/* Self Slot at bottom of arena */
-.slot-bottom {
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none; /* Merged into hand bar for sleek ergonomics */
-}
-
-/* Center Pot HUD Badge (Round / Trump / Turn inside Felt) */
-.center-pot-hud {
+/* ─── Bottom-Right Table HUD Corner (Round X/Y & TRUMP ♠) ──────────────── */
+.table-hud-corner {
   position: absolute;
-  top: 14px;
+  right: 14px;
+  bottom: 12px;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  padding: 4px 14px;
-  backdrop-filter: blur(4px);
-  z-index: 5;
-}
-
-.pot-round {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #fde047;
-  font-family: var(--font-mono);
-}
-
-.pot-trump {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0 8px;
+  z-index: 20;
+  pointer-events: none;
 }
 
-.pot-trump-icon {
-  font-size: 1rem;
+.hud-round-pill {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hud-trump-pill {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hud-trump-tag {
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: #0f172a;
+}
+
+.hud-trump-icon {
+  font-size: 1.25rem;
   line-height: 1;
 }
 
-.pot-trump-name {
-  color: #fff;
-}
-
-.pot-turn {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #86efac;
-}
-
-/* Center Trick Cards Stage */
+/* ─── Center Trick Cards Stage ───────────────────────────────────── */
 .trick-cards-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  z-index: 8;
+  gap: 14px;
+  z-index: 15;
+  flex-wrap: wrap;
+  max-width: 90%;
 }
 
 .trick-card-wrap {
@@ -805,28 +864,35 @@ input:focus, select:focus {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  animation: cardPlaySlide 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: cardPlaySlide 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
 
 @keyframes cardPlaySlide {
-  0% { transform: translateY(20px) scale(0.9); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+  0% { transform: translateY(35px) scale(0.7) rotate(-5deg); opacity: 0; }
+  100% { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
 }
 
 .trick-player-label {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
-  background: rgba(0, 0, 0, 0.55);
-  padding: 1px 7px;
-  border-radius: 8px;
-  letter-spacing: 0.2px;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+/* First card played in trick gets red highlight border (exact reference) */
+.first-lead-card {
+  outline: 3px solid #ef4444 !important;
+  outline-offset: 1px;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6) !important;
 }
 
 /* Trick Winner Banner (Over table) */
 .trick-winner-banner {
   position: absolute;
-  bottom: 20px;
+  top: 14px;
   background: linear-gradient(180deg, #fef08a 0%, #eab308 100%);
   color: #713f12;
   font-weight: 800;
@@ -835,7 +901,7 @@ input:focus, select:focus {
   border-radius: 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   border: 1px solid #fef08a;
-  z-index: 15;
+  z-index: 25;
   animation: winnerPop 0.25s ease-out;
 }
 
@@ -846,8 +912,8 @@ input:focus, select:focus {
 
 /* ─── Card Components ───────────────────────────────────────────── */
 .card {
-  width: 60px;
-  height: 88px;
+  width: 58px;
+  height: 84px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-card);
@@ -859,13 +925,13 @@ input:focus, select:focus {
   box-shadow: var(--shadow-card);
   user-select: none;
   position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
 @media (min-width: 768px) {
   .card {
-    width: 68px;
-    height: 100px;
+    width: 66px;
+    height: 96px;
     padding: 6px;
   }
 }
@@ -891,19 +957,26 @@ input:focus, select:focus {
 }
 
 .card.suit-H, .card.suit-D, .suit-red {
-  color: var(--danger);
+  color: #dc2626 !important;
 }
 
 .card.suit-S, .card.suit-C, .suit-black {
-  color: #111827;
+  color: #0f172a !important;
+}
+
+/* Smooth Card Play / Throw Animation from hand */
+.hand-card.throwing {
+  transform: translateY(-90px) scale(1.1) rotate(6deg) !important;
+  opacity: 0 !important;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease !important;
 }
 
 /* ─── Bottom Hand Area (User Cards) ─────────────────────────────── */
 .player-hand-container {
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(9, 14, 26, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.99) 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px 12px 10px;
+  padding: 6px 12px 10px;
   display: flex;
   flex-direction: column;
   z-index: 40;
@@ -917,7 +990,7 @@ input:focus, select:focus {
   color: #94a3b8;
   font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .hand-instruction {
@@ -925,6 +998,10 @@ input:focus, select:focus {
   font-weight: 800;
   font-size: 0.82rem;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 
 .player-hand {
@@ -934,7 +1011,7 @@ input:focus, select:focus {
   overflow-x: auto;
   overflow-y: visible;
   padding: 6px 12px 2px;
-  min-height: 98px;
+  min-height: 94px;
   scrollbar-width: none;
 }
 
@@ -945,9 +1022,9 @@ input:focus, select:focus {
 .hand-card {
   cursor: pointer;
   flex-shrink: 0;
-  margin-left: -18px;
+  margin-left: -16px;
   position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
 }
 
 .hand-card:first-child {
@@ -956,19 +1033,25 @@ input:focus, select:focus {
 
 @media (max-width: 600px) {
   .hand-card {
-    margin-left: -22px;
+    margin-left: -20px;
+  }
+  .hand-meta-bar {
+    font-size: 0.7rem;
+  }
+  .hand-instruction {
+    font-size: 0.74rem;
   }
 }
 
 .hand-card.is-playable {
   border-color: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
 }
 
 .hand-card.is-playable:hover {
-  transform: translateY(-16px);
+  transform: translateY(-20px);
   z-index: 20;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
 }
 
 .hand-card.not-playable {

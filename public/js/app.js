@@ -52,11 +52,11 @@ const btnStartGame     = $('btn-start-game');
 const btnAddBot        = $('btn-add-bot');
 const formRules        = $('form-rules');
 const ruleMaxCards     = $('rule-max-cards');
-const ruleTrump        = $('rule-trump');
 const ruleBiddingRestriction = $('rule-bidding-restriction');
 
 // Table Arena
 const tableOpponents      = $('table-opponents');
+const playerSelfBadge     = $('player-self-badge');
 const hudRound            = $('hud-round-number');
 const hudTrumpIcon        = $('hud-trump-suit-icon');
 const hudTrumpName        = $('hud-trump-name');
@@ -285,8 +285,12 @@ function bindUIEvents() {
   if (btnAddBot) {
     btnAddBot.addEventListener('click', () => {
       if (!S.isHost) return;
-      socket.emit('add_bot', {}, res => {
-        if (res && !res.success) toast(res.error, true);
+      S.socket.emit('add_bot', {}, res => {
+        if (res?.success) {
+          renderLobby(res.lobbyState);
+        } else if (res && !res.success) {
+          toast(res.error, true);
+        }
       });
     });
   }
@@ -351,14 +355,13 @@ function bindUIEvents() {
       rules: {
         roundSequence:      'up_down',
         maxCardsCap:        parseInt(ruleMaxCards.value, 10),
-        trumpSelection:     ruleTrump.value,
+        trumpSelection:     'rotation',
         scoringMode:        'standard',
         biddingRestriction: ruleBiddingRestriction.checked
       }
     });
   };
   ruleMaxCards.addEventListener('change', emitRules);
-  ruleTrump.addEventListener('change', emitRules);
   ruleBiddingRestriction.addEventListener('change', emitRules);
 
   btnStartGame.addEventListener('click', () => {
@@ -423,7 +426,6 @@ function renderLobby(state) {
   }
   if (state.rules) {
     ruleMaxCards.value             = String(state.rules.maxCardsCap || 8);
-    ruleTrump.value                = state.rules.trumpSelection || 'rotation';
     ruleBiddingRestriction.checked = !!state.rules.biddingRestriction;
   }
 
@@ -453,9 +455,14 @@ function renderLobby(state) {
       const removeBtn = li.querySelector('.btn-remove-bot');
       if (removeBtn) {
         removeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          socket.emit('remove_bot', { botId: p.id }, res => {
-            if (res && !res.success) toast(res.error, true);
+          S.socket.emit('remove_bot', { botId: p.id }, res => {
+            if (res?.success) {
+              renderLobby(res.lobbyState);
+            } else if (res && !res.success) {
+              toast(res.error, true);
+            }
           });
         });
       }
@@ -483,24 +490,31 @@ function renderLobby(state) {
 function renderGame(state) {
   const isMyTurn = state.currentTurn === S.playerId;
 
-  // 1. Center Pot HUD (Round / Trump / Turn)
-  hudRound.textContent = `R ${state.roundNumber}/${state.totalRounds}`;
+  // 1. Bottom-Right Corner HUD (Round X/Y & TRUMP symbol)
+  if (hudRound) hudRound.textContent = `Round ${state.roundNumber}/${state.totalRounds}`;
 
   const trump = state.trumpSuit || 'NT';
   const isRedTrump = (trump === 'H' || trump === 'D');
-  hudTrumpIcon.textContent = SUIT_SYMBOLS[trump] || trump;
-  hudTrumpIcon.className   = `pot-trump-icon ${isRedTrump ? 'suit-red' : 'suit-black'}`;
-  if (trump === 'NT') hudTrumpIcon.className = 'pot-trump-icon';
-  hudTrumpName.textContent = SUIT_NAMES[trump] || trump;
+  if (hudTrumpIcon) {
+    hudTrumpIcon.textContent = SUIT_SYMBOLS[trump] || trump;
+    hudTrumpIcon.className   = `hud-trump-icon ${isRedTrump ? 'suit-red' : 'suit-black'}`;
+    if (trump === 'NT') hudTrumpIcon.className = 'hud-trump-icon';
+  }
+  if (hudTrumpName) hudTrumpName.textContent = SUIT_NAMES[trump] || trump;
 
+  // Center status badge (e.g. "Playing" or "Your Turn")
   const turnPlayer = state.players.find(p => p.id === state.currentTurn);
-  hudCurrentTurn.textContent = isMyTurn
-    ? 'YOUR TURN'
-    : (turnPlayer ? `${turnPlayer.name}'s Turn` : '—');
-  hudCurrentTurn.style.color = isMyTurn ? '#4ade80' : '#fde047';
+  if (hudCurrentTurn) {
+    if (state.phase === 'BIDDING') {
+      hudCurrentTurn.textContent = isMyTurn ? 'Your Judgement' : `${turnPlayer ? turnPlayer.name : 'Bidding'}`;
+    } else {
+      hudCurrentTurn.textContent = isMyTurn ? 'Your Turn' : 'Playing';
+    }
+  }
 
-  // 2. Seated Opponents Layout (Radial positioning around table)
+  // 2. Seated Opponents Layout & Self Badge (Authentic Indian Judgement Circular Avatars)
   renderOpponentsAroundTable(state);
+  renderSelfBadge(state);
 
   // 3. Live Scoreboard (modal table)
   scoreboardBody.innerHTML = '';
@@ -524,12 +538,19 @@ function renderGame(state) {
     ? state.currentTrick
     : (state.lastCompletedTrick?.plays || []);
 
-  trickToShow.forEach(play => {
+  trickToShow.forEach((play, index) => {
     const pInfo = state.players.find(p => p.id === play.playerId);
     const wrap  = document.createElement('div');
     wrap.className = 'trick-card-wrap';
+
+    // First card played in trick has red highlight border (exact Indian Judgement UI feature)
+    const isFirstCard = (index === 0);
     const cardEl = makeCard(play.card);
-    const lbl    = document.createElement('span');
+    if (isFirstCard) {
+      cardEl.classList.add('first-lead-card');
+    }
+
+    const lbl = document.createElement('span');
     lbl.className   = 'trick-player-label';
     lbl.textContent = pInfo ? pInfo.name : play.playerId;
     wrap.appendChild(cardEl);
@@ -624,9 +645,16 @@ function renderGame(state) {
       if (canPlay) {
         cardEl.classList.add('is-playable');
         cardEl.addEventListener('click', () => {
-          S.socket.emit('play_card', { card }, res => {
-            if (res && !res.success) toast(res.error, true);
-          });
+          // Trigger smooth throw animation
+          cardEl.classList.add('throwing');
+          setTimeout(() => {
+            S.socket.emit('play_card', { card }, res => {
+              if (res && !res.success) {
+                cardEl.classList.remove('throwing');
+                toast(res.error, true);
+              }
+            });
+          }, 180);
         });
       } else {
         cardEl.classList.add('not-playable');
@@ -654,6 +682,16 @@ function renderGame(state) {
 }
 
 // ─── Opponents Positioning Around Oval Table ──────────────────────────────────
+const AVATAR_COLORS = [
+  '#ea580c', // orange (like Chris)
+  '#0d9488', // teal (like Sam)
+  '#e11d48', // crimson/red (like Rajesh)
+  '#8b5cf6', // purple
+  '#0284c7', // light blue
+  '#16a34a', // green
+  '#d97706'  // amber
+];
+
 function renderOpponentsAroundTable(state) {
   tableOpponents.innerHTML = '';
 
@@ -678,24 +716,83 @@ function renderOpponentsAroundTable(state) {
     slot.style.top  = `${pos.y}%`;
 
     const isDealer = state.dealer === p.id;
-    const initial  = p.isBot ? '🤖' : (p.name || '?').charAt(0).toUpperCase();
     const bidLabel = p.bid !== null ? p.bid : '?';
     const wonLabel = p.tricksWon;
+    const scoreVal = p.totalScore ?? 0;
+    const colorBg  = p.isBot ? '#7c3aed' : AVATAR_COLORS[(idx) % AVATAR_COLORS.length];
 
+    // Format badge with:
+    // 1. Head circle with Total Score badge
+    // 2. Won/Bid pill (e.g. 0/0 or 1/5)
+    // 3. Name below
     slot.innerHTML = `
-      <div class="player-slot-card">
-        <div class="player-avatar-circle ${p.isBot ? 'avatar-bot' : ''}">
-          ${initial}
+      <div class="player-avatar-widget" style="--avatar-color: ${colorBg};">
+        <div class="avatar-head-circle">
+          <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="7" r="4"/>
+            <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/>
+          </svg>
+          <span class="avatar-score-badge" title="Total score: ${scoreVal}">${scoreVal}</span>
           ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
         </div>
-        <div class="player-info-meta">
-          <span class="player-name-text">${html(p.name)}${p.isBot ? ' 🤖' : ''}</span>
-          <span class="player-stats-text">Bid:${bidLabel} · Won:${wonLabel}</span>
+        <div class="avatar-bid-strip">
+          <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
         </div>
+        <div class="avatar-player-name">${html(p.name)}${p.isBot ? ' 🤖' : ''}</div>
       </div>
     `;
+
+    // Admin kick interaction if host
+    if (S.isHost && p.id !== S.playerId) {
+      slot.style.cursor = 'pointer';
+      slot.title = p.isBot ? 'Click to remove bot' : 'Click to kick player (Admin)';
+      slot.addEventListener('click', () => {
+        const confirmKick = confirm(`Remove ${p.name} from room?`);
+        if (confirmKick) {
+          if (p.isBot) {
+            S.socket.emit('remove_bot', { botId: p.id }, res => {
+              if (res && !res.success) toast(res.error, true);
+            });
+          }
+        }
+      });
+    }
+
     tableOpponents.appendChild(slot);
   });
+}
+
+function renderSelfBadge(state) {
+  if (!playerSelfBadge) return;
+  const me = state.players.find(p => p.id === S.playerId);
+  if (!me) {
+    playerSelfBadge.innerHTML = '';
+    return;
+  }
+
+  const isDealer = state.dealer === me.id;
+  const isTurn   = state.currentTurn === me.id;
+  const bidLabel = me.bid !== null ? me.bid : '?';
+  const wonLabel = me.tricksWon;
+  const scoreVal = me.totalScore ?? 0;
+
+  playerSelfBadge.className = `player-slot slot-self${isTurn ? ' is-turn' : ''}`;
+  playerSelfBadge.innerHTML = `
+    <div class="player-avatar-widget self-widget" style="--avatar-color: #3b82f6;">
+      <div class="avatar-head-circle">
+        <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="7" r="4"/>
+          <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/>
+        </svg>
+        <span class="avatar-score-badge" title="Total score: ${scoreVal}">${scoreVal}</span>
+        ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
+      </div>
+      <div class="avatar-bid-strip">
+        <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
+      </div>
+      <div class="avatar-player-name">${html(me.name)} (You)</div>
+    </div>
+  `;
 }
 
 function getTableCoordinates(idx, total) {
