@@ -763,6 +763,36 @@ input:focus, select:focus {
   color: #f8fafc;
 }
 
+/* Dynamic Turn Status Pill under avatar ("Playing" or "Guessing") */
+.avatar-turn-status {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 9px;
+  border-radius: 10px;
+  margin-top: 3px;
+  animation: statusPulse 1.2s infinite alternate ease-in-out;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.avatar-turn-status.status-playing {
+  background: #22c55e;
+  color: #ffffff;
+  border: 1px solid #86efac;
+}
+
+.avatar-turn-status.status-guessing {
+  background: #f59e0b;
+  color: #0f172a;
+  border: 1px solid #fef08a;
+}
+
+@keyframes statusPulse {
+  0% { transform: scale(0.96); opacity: 0.88; }
+  100% { transform: scale(1.04); opacity: 1; }
+}
+
 .avatar-player-name {
   font-size: 0.76rem;
   font-weight: 700;
@@ -864,12 +894,22 @@ input:focus, select:focus {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  animation: cardPlaySlide 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  animation: cardFlyToBoard 0.4s cubic-bezier(0.2, 0.85, 0.35, 1.2) forwards;
 }
 
-@keyframes cardPlaySlide {
-  0% { transform: translateY(35px) scale(0.7) rotate(-5deg); opacity: 0; }
-  100% { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+@keyframes cardFlyToBoard {
+  0% { 
+    transform: translateY(-40px) scale(0.4) rotate(-10deg); 
+    opacity: 0; 
+  }
+  60% {
+    transform: translateY(6px) scale(1.05) rotate(2deg);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(0) scale(1) rotate(0); 
+    opacity: 1; 
+  }
 }
 
 .trick-player-label {

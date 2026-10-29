@@ -502,13 +502,12 @@ function renderGame(state) {
   }
   if (hudTrumpName) hudTrumpName.textContent = SUIT_NAMES[trump] || trump;
 
-  // Center status badge (e.g. "Playing" or "Your Turn")
-  const turnPlayer = state.players.find(p => p.id === state.currentTurn);
+  // Center status badge
   if (hudCurrentTurn) {
     if (state.phase === 'BIDDING') {
-      hudCurrentTurn.textContent = isMyTurn ? 'Your Judgement' : `${turnPlayer ? turnPlayer.name : 'Bidding'}`;
+      hudCurrentTurn.textContent = isMyTurn ? 'Your Judgement' : 'Making Judgement';
     } else {
-      hudCurrentTurn.textContent = isMyTurn ? 'Your Turn' : 'Playing';
+      hudCurrentTurn.textContent = isMyTurn ? 'Your Turn' : 'Round Active';
     }
   }
 
@@ -542,6 +541,11 @@ function renderGame(state) {
     const pInfo = state.players.find(p => p.id === play.playerId);
     const wrap  = document.createElement('div');
     wrap.className = 'trick-card-wrap';
+
+    // Link card to player ID for dynamic origin animation
+    if (play.playerId) {
+      wrap.setAttribute('data-player-id', play.playerId);
+    }
 
     // First card played in trick has red highlight border (exact Indian Judgement UI feature)
     const isFirstCard = (index === 0);
@@ -721,10 +725,24 @@ function renderOpponentsAroundTable(state) {
     const scoreVal = p.totalScore ?? 0;
     const colorBg  = p.isBot ? '#7c3aed' : AVATAR_COLORS[(idx) % AVATAR_COLORS.length];
 
+    // Status pill under icon: "Playing" when playing card, "Guessing" when making judgment
+    let statusPill = '';
+    if (isTurn) {
+      if (state.phase === 'BIDDING') {
+        statusPill = `<div class="avatar-turn-status status-guessing">Guessing</div>`;
+      } else if (state.phase === 'PLAYING') {
+        statusPill = `<div class="avatar-turn-status status-playing">Playing</div>`;
+      }
+    }
+
+    // Assign slot ID so card animation can compute exact vector from this player's avatar
+    slot.id = `slot-${p.id}`;
+
     // Format badge with:
     // 1. Head circle with Total Score badge
     // 2. Won/Bid pill (e.g. 0/0 or 1/5)
-    // 3. Name below
+    // 3. Status indicator ("Playing" / "Guessing")
+    // 4. Name below
     slot.innerHTML = `
       <div class="player-avatar-widget" style="--avatar-color: ${colorBg};">
         <div class="avatar-head-circle">
@@ -738,6 +756,7 @@ function renderOpponentsAroundTable(state) {
         <div class="avatar-bid-strip">
           <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
         </div>
+        ${statusPill}
         <div class="avatar-player-name">${html(p.name)}${p.isBot ? ' 🤖' : ''}</div>
       </div>
     `;
@@ -776,6 +795,16 @@ function renderSelfBadge(state) {
   const wonLabel = me.tricksWon;
   const scoreVal = me.totalScore ?? 0;
 
+  let selfStatusPill = '';
+  if (isTurn) {
+    if (state.phase === 'BIDDING') {
+      selfStatusPill = `<div class="avatar-turn-status status-guessing">Guessing</div>`;
+    } else if (state.phase === 'PLAYING') {
+      selfStatusPill = `<div class="avatar-turn-status status-playing">Playing</div>`;
+    }
+  }
+
+  playerSelfBadge.id = `slot-${me.id}`;
   playerSelfBadge.className = `player-slot slot-self${isTurn ? ' is-turn' : ''}`;
   playerSelfBadge.innerHTML = `
     <div class="player-avatar-widget self-widget" style="--avatar-color: #3b82f6;">
@@ -790,6 +819,7 @@ function renderSelfBadge(state) {
       <div class="avatar-bid-strip">
         <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
       </div>
+      ${selfStatusPill}
       <div class="avatar-player-name">${html(me.name)} (You)</div>
     </div>
   `;
