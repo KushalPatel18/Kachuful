@@ -42,6 +42,7 @@ const inputRoomCode = $('input-room-code');
 const headerRoomPill   = $('header-room-pill');
 const headerRoomCode   = $('header-room-code');
 const btnToggleScore   = $('btn-toggle-score');
+const btnExitGame      = $('btn-exit-game');
 
 // Lobby
 const lobbyRoomCode    = $('lobby-room-code');
@@ -94,8 +95,13 @@ function showScreen(key) {
 
   if (key === 'game') {
     btnToggleScore.classList.remove('hidden');
+    btnExitGame.classList.remove('hidden');
+  } else if (key === 'lobby') {
+    btnToggleScore.classList.add('hidden');
+    btnExitGame.classList.remove('hidden');
   } else {
     btnToggleScore.classList.add('hidden');
+    btnExitGame.classList.add('hidden');
   }
 }
 
@@ -269,6 +275,37 @@ function bindUIEvents() {
   btnToggleScore.addEventListener('click', toggleScorecard);
   btnQuickScore.addEventListener('click', toggleScorecard);
   btnCloseScorecard.addEventListener('click', () => modalScorecard.classList.add('hidden'));
+
+  // Exit Game button — leaves room and returns to home screen
+  btnExitGame.addEventListener('click', () => {
+    const confirmExit = confirm('Are you sure you want to leave this game and return to home?');
+    if (!confirmExit) return;
+
+    // Disconnect and reset session
+    if (S.socket) {
+      S.socket.disconnect();
+    }
+    localStorage.removeItem('kachuful_token');
+    localStorage.removeItem('kachuful_room');
+    S.roomCode = null;
+    S.token = null;
+    S.playerId = null;
+    S.gameState = null;
+    updateHeaderRoom(null);
+
+    // Close any open modals
+    modalScorecard.classList.add('hidden');
+    modalRoundSummary.classList.add('hidden');
+    modalGameOver.classList.add('hidden');
+
+    // Return to home screen
+    showScreen('home');
+    toast('You left the game.');
+
+    // Reconnect a fresh socket for next game
+    S.socket = io();
+    bindSocketEvents();
+  });
 
   // Host rule updates
   const emitRules = () => {
