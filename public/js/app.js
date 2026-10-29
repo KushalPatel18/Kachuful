@@ -67,6 +67,9 @@ const trickWinnerText     = $('trick-winner-text');
 const biddingTray         = $('bidding-tray');
 const bidHint             = $('bidding-hint');
 const bidButtonsGrid      = $('bid-buttons-grid');
+const biddingTrumpIcon    = $('bidding-trump-icon');
+const biddingTrumpText    = $('bidding-trump-text');
+const biddingTrumpCardPreview = $('bidding-trump-card-preview');
 
 // Hand
 const playerHandEl   = $('player-hand');
@@ -548,6 +551,25 @@ function renderGame(state) {
   // 6. Bidding Dialog / Tray
   if (state.phase === 'BIDDING' && isMyTurn) {
     biddingTray.classList.remove('hidden');
+
+    // Display trump suit & card prominent in judgment dialog
+    if (biddingTrumpIcon && biddingTrumpText) {
+      const isRed = (trump === 'H' || trump === 'D');
+      biddingTrumpIcon.textContent = SUIT_SYMBOLS[trump] || trump;
+      biddingTrumpIcon.className = `bidding-trump-icon ${isRed ? 'suit-red' : 'suit-black'}`;
+      biddingTrumpText.textContent = SUIT_NAMES[trump] || trump;
+
+      if (state.trumpCard && biddingTrumpCardPreview) {
+        biddingTrumpCardPreview.innerHTML = '';
+        const previewCard = makeCard(state.trumpCard);
+        biddingTrumpCardPreview.appendChild(previewCard);
+        biddingTrumpCardPreview.classList.remove('hidden');
+      } else if (biddingTrumpCardPreview) {
+        biddingTrumpCardPreview.innerHTML = '';
+        biddingTrumpCardPreview.classList.add('hidden');
+      }
+    }
+
     bidHint.textContent = `Round of ${state.cardsInRound} trick${state.cardsInRound !== 1 ? 's' : ''}. How many will you win?`;
     bidButtonsGrid.innerHTML = '';
     for (let b = 0; b <= state.cardsInRound; b++) {

@@ -72,7 +72,8 @@ export function createServerApp(options = {}) {
       const playerObj = room.getPlayer(turnPlayerId);
       if (!playerObj || !playerObj.isBot) return;
 
-      // Small delay so moves feel natural and humans can follow
+      // Human-like natural thinking delay: 1600ms - 2400ms
+      const delay = Math.floor(1600 + Math.random() * 800);
       setTimeout(() => {
         try {
           if (!room.game || room.game.currentTurnPlayerId !== turnPlayerId) return;
@@ -96,7 +97,7 @@ export function createServerApp(options = {}) {
         } catch (err) {
           console.error(`Bot move error for ${turnPlayerId}:`, err);
         }
-      }, 700);
+      }, delay);
     };
 
     // 1. CREATE ROOM

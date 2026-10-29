@@ -1008,6 +1008,45 @@ input:focus, select:focus {
   color: #0f172a;
 }
 
+.bidding-trump-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin: 10px auto 6px;
+}
+
+.bidding-trump-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bidding-trump-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.bidding-trump-text {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.bidding-trump-card-preview {
+  margin-left: 8px;
+  transform: scale(0.68);
+  transform-origin: center center;
+  margin-top: -6px;
+  margin-bottom: -6px;
+}
+
 .bidding-title p {
   color: var(--text-muted);
   font-size: 0.85rem;
