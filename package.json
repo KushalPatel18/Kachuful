@@ -1,0 +1,26 @@
+{
+  "name": "kachuful-online",
+  "version": "1.0.0",
+  "description": "Multiplayer Kachuful (Oh Hell / Judgment) card game",
+  "main": "src/game/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "kachuful",
+    "oh-hell",
+    "judgment",
+    "card-game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
+  }
+}
