@@ -23,7 +23,9 @@ const S = {
   playerId: null,
   nickname: '',
   isHost: false,
-  gameState: null
+  gameState: null,
+  renderedPlaysSet: new Set(),
+  roundSummaryDelayTimer: null
 };
 
 // ─── DOM Elements ─────────────────────────────────────────────────────────────
@@ -537,6 +539,10 @@ function renderGame(state) {
     ? state.currentTrick
     : (state.lastCompletedTrick?.plays || []);
 
+  const trickTargetRect = trickCardsContainer.getBoundingClientRect();
+  const targetCenterX = trickTargetRect.left + trickTargetRect.width / 2;
+  const targetCenterY = trickTargetRect.top + trickTargetRect.height / 2;
+
   trickToShow.forEach((play, index) => {
     const pInfo = state.players.find(p => p.id === play.playerId);
     const wrap  = document.createElement('div');
@@ -559,11 +565,35 @@ function renderGame(state) {
     lbl.textContent = pInfo ? pInfo.name : play.playerId;
     wrap.appendChild(cardEl);
     wrap.appendChild(lbl);
+
+    // Compute dynamic origin vector from player's avatar icon to board
+    const playKey = `${state.roundNumber}_${play.playerId}_${play.card.suit}${play.card.rank}_${index}`;
+    const isNewPlay = !S.renderedPlaysSet.has(playKey);
+    if (isNewPlay) {
+      S.renderedPlaysSet.add(playKey);
+      wrap.classList.add('animating-entry');
+
+      // Find player's avatar icon element
+      const playerSlotEl = document.getElementById(`slot-${play.playerId}`);
+      if (playerSlotEl) {
+        const pRect = playerSlotEl.getBoundingClientRect();
+        const pCenterX = pRect.left + pRect.width / 2;
+        const pCenterY = pRect.top + pRect.height / 2;
+        const deltaX = pCenterX - targetCenterX;
+        const deltaY = pCenterY - targetCenterY;
+        wrap.style.setProperty('--fly-x', `${Math.round(deltaX)}px`);
+        wrap.style.setProperty('--fly-y', `${Math.round(deltaY)}px`);
+      } else {
+        wrap.style.setProperty('--fly-x', '0px');
+        wrap.style.setProperty('--fly-y', '-80px');
+      }
+    }
+
     trickCardsContainer.appendChild(wrap);
   });
 
-  // 5. Trick Winner Banner
-  if (state.lastCompletedTrick && state.currentTrick.length === 0 && state.phase === 'PLAYING') {
+  // 5. Trick Winner Banner (Shown after trick completes during playing or round ended)
+  if (state.lastCompletedTrick && state.currentTrick.length === 0 && (state.phase === 'PLAYING' || state.phase === 'ROUND_ENDED' || state.phase === 'GAME_OVER')) {
     const winnerInfo = state.players.find(p => p.id === state.lastCompletedTrick.winner.playerId);
     trickWinnerText.textContent = winnerInfo
       ? `🏆 ${winnerInfo.name} takes the trick!`
@@ -668,18 +698,28 @@ function renderGame(state) {
     playerHandEl.appendChild(cardEl);
   });
 
-  // 8. Round summary modal
+  // 8. Round summary modal — show with a gentle delay so players see the last card played and trick winner
   if (state.phase === 'ROUND_ENDED') {
-    renderRoundSummary(state);
-    modalRoundSummary.classList.remove('hidden');
+    if (S.roundSummaryDelayTimer) clearTimeout(S.roundSummaryDelayTimer);
+    // Keep round summary modal hidden temporarily for 2.2 seconds while the final card and trick winner banner are displayed
+    S.roundSummaryDelayTimer = setTimeout(() => {
+      renderRoundSummary(state);
+      modalRoundSummary.classList.remove('hidden');
+    }, 2200);
   } else {
+    if (S.roundSummaryDelayTimer) {
+      clearTimeout(S.roundSummaryDelayTimer);
+      S.roundSummaryDelayTimer = null;
+    }
     modalRoundSummary.classList.add('hidden');
   }
 
-  // 9. Game over modal
+  // 9. Game over modal — also allow players to see the final trick resolution
   if (state.phase === 'GAME_OVER') {
-    renderGameOver(state);
-    modalGameOver.classList.remove('hidden');
+    setTimeout(() => {
+      renderGameOver(state);
+      modalGameOver.classList.remove('hidden');
+    }, 2200);
   } else {
     modalGameOver.classList.add('hidden');
   }
