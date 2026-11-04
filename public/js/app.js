@@ -25,7 +25,8 @@ const S = {
   isHost: false,
   gameState: null,
   renderedPlaysSet: new Set(),
-  roundSummaryDelayTimer: null
+  roundSummaryDelayTimer: null,
+  isThrowingCard: false
 };
 
 // ─── DOM Elements ─────────────────────────────────────────────────────────────
@@ -72,6 +73,9 @@ const bidButtonsGrid      = $('bid-buttons-grid');
 const biddingTrumpIcon    = $('bidding-trump-icon');
 const biddingTrumpText    = $('bidding-trump-text');
 const biddingTrumpCardPreview = $('bidding-trump-card-preview');
+const guessPanel          = $('guess-panel');
+const guessPanelNamesRow  = $('guess-panel-names-row');
+const guessPanelBadgesRow = $('guess-panel-badges-row');
 
 // Hand
 const playerHandEl   = $('player-hand');
@@ -157,32 +161,57 @@ function makeCard(card) {
 
 // ─── Socket Initialization ────────────────────────────────────────────────────
 function init() {
-  S.socket = io();
+  S.socket = io({
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 2000,
+    timeout: 10000
+  });
 
   const urlCode = new URLSearchParams(location.search).get('room');
-  if (urlCode) inputRoomCode.value = urlCode.toUpperCase();
+  if (urlCode) {
+    const cleanUrlCode = urlCode.trim().toUpperCase();
+    inputRoomCode.value = cleanUrlCode;
+    // If joining a different room via link, clear stale saved room
+    if (localStorage.getItem('kachuful_room') && localStorage.getItem('kachuful_room') !== cleanUrlCode) {
+      localStorage.removeItem('kachuful_room');
+      localStorage.removeItem('kachuful_token');
+    }
+  }
 
   const savedNick = localStorage.getItem('kachuful_nick');
   if (savedNick) inputNickname.value = savedNick;
 
-  const savedToken = localStorage.getItem('kachuful_token');
-  const savedRoom  = localStorage.getItem('kachuful_room');
+  // Bind socket & UI events right away so no events are missed
+  bindSocketEvents();
+  bindUIEvents();
+
+  // Attempt initial reconnection
+  attemptSessionReconnect();
+}
+
+function attemptSessionReconnect() {
+  const savedToken = S.token || localStorage.getItem('kachuful_token');
+  const savedRoom  = S.roomCode || localStorage.getItem('kachuful_room');
+  const savedNick  = localStorage.getItem('kachuful_nick');
+
   if (savedToken && savedRoom) {
     S.socket.emit('reconnect_session', { roomCode: savedRoom, token: savedToken }, res => {
       if (res?.success) {
         S.roomCode = savedRoom;
         S.token    = savedToken;
         S.playerId = res.playerId;
-        S.nickname = res.nickname || savedNick;
+        S.nickname = res.nickname || savedNick || S.nickname;
         updateHeaderRoom(savedRoom);
 
-        if (res.phase === 'LOBBY') {
-          showScreen('lobby');
-          renderLobby(res.lobbyState);
-        } else if (res.gameState) {
+        if (res.isGameStarted && res.gameState) {
           S.gameState = res.gameState;
           showScreen('game');
           renderGame(res.gameState);
+        } else if (res.lobbyState) {
+          showScreen('lobby');
+          renderLobby(res.lobbyState);
         }
       } else {
         localStorage.removeItem('kachuful_token');
@@ -190,14 +219,16 @@ function init() {
       }
     });
   }
-
-  bindSocketEvents();
-  bindUIEvents();
 }
 
 // ─── Socket Events ────────────────────────────────────────────────────────────
 function bindSocketEvents() {
   const { socket } = S;
+
+  // Auto re-sync session on any reconnect without page reload
+  socket.on('connect', () => {
+    attemptSessionReconnect();
+  });
 
   socket.on('lobby_update', state => {
     if (!state.isGameStarted) {
@@ -255,31 +286,35 @@ function bindSocketEvents() {
 
 // ─── UI Event Bindings ────────────────────────────────────────────────────────
 function bindUIEvents() {
-  const { socket } = S;
-
   $('btn-create-room').addEventListener('click', () => {
     const nickname = inputNickname.value.trim();
     if (!nickname) { toast('Enter your player name.', true); return; }
-    socket.emit('create_room', { nickname }, res => {
+    S.socket.emit('create_room', { nickname }, res => {
       if (!res.success) { toast(res.error, true); return; }
       handleJoinSuccess(res, nickname);
     });
   });
 
-  // Play with bots: create room and automatically add 3 bots
+  // Play with bots: instant start without lag or manual lobby wait
   $('btn-play-bots').addEventListener('click', () => {
     const nickname = inputNickname.value.trim() || 'Player';
-    socket.emit('create_room', { nickname }, res => {
-      if (!res.success) { toast(res.error, true); return; }
+    const btn = $('btn-play-bots');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-icon-lead">⏳</span> Starting...';
+
+    S.socket.emit('play_with_bots', { nickname }, res => {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-icon-lead">🤖</span> Play with Bots';
+      if (!res?.success) {
+        toast(res?.error || 'Failed to start game with bots', true);
+        return;
+      }
       handleJoinSuccess(res, nickname);
-      // Auto-add 3 bots sequentially
-      socket.emit('add_bot', {}, res1 => {
-        if (!res1?.success) return;
-        socket.emit('add_bot', {}, res2 => {
-          if (!res2?.success) return;
-          socket.emit('add_bot', {});
-        });
-      });
+      if (res.gameState) {
+        S.gameState = res.gameState;
+        showScreen('game');
+        renderGame(res.gameState);
+      }
     });
   });
 
@@ -287,7 +322,7 @@ function bindUIEvents() {
   if (btnAddBot) {
     btnAddBot.addEventListener('click', () => {
       if (!S.isHost) return;
-      S.socket.emit('add_bot', {}, res => {
+      S.socket.emit('add_bot', { count: 1 }, res => {
         if (res?.success) {
           renderLobby(res.lobbyState);
         } else if (res && !res.success) {
@@ -302,9 +337,19 @@ function bindUIEvents() {
     const roomCode = inputRoomCode.value.trim().toUpperCase();
     if (!nickname) { toast('Enter your player name.', true); return; }
     if (!roomCode) { toast('Enter a room code.', true); return; }
-    socket.emit('join_room', { roomCode, nickname }, res => {
+
+    const savedToken = (localStorage.getItem('kachuful_room') === roomCode)
+      ? localStorage.getItem('kachuful_token')
+      : null;
+
+    S.socket.emit('join_room', { roomCode, nickname, token: savedToken }, res => {
       if (!res.success) { toast(res.error, true); return; }
       handleJoinSuccess(res, nickname);
+      if (res.gameState) {
+        S.gameState = res.gameState;
+        showScreen('game');
+        renderGame(res.gameState);
+      }
     });
   });
 
@@ -319,14 +364,13 @@ function bindUIEvents() {
   btnQuickScore.addEventListener('click', toggleScorecard);
   btnCloseScorecard.addEventListener('click', () => modalScorecard.classList.add('hidden'));
 
-  // Exit Game button — leaves room and returns to home screen
+  // Exit Game button — leaves room and returns to home screen cleanly without breaking socket
   btnExitGame.addEventListener('click', () => {
     const confirmExit = confirm('Are you sure you want to leave this game and return to home?');
     if (!confirmExit) return;
 
-    // Disconnect and reset session
     if (S.socket) {
-      S.socket.disconnect();
+      S.socket.emit('leave_room');
     }
     localStorage.removeItem('kachuful_token');
     localStorage.removeItem('kachuful_room');
@@ -344,16 +388,12 @@ function bindUIEvents() {
     // Return to home screen
     showScreen('home');
     toast('You left the game.');
-
-    // Reconnect a fresh socket for next game
-    S.socket = io();
-    bindSocketEvents();
   });
 
   // Host rule updates
   const emitRules = () => {
     if (!S.isHost) return;
-    socket.emit('update_rules', {
+    S.socket.emit('update_rules', {
       rules: {
         roundSequence:      'up_down',
         maxCardsCap:        parseInt(ruleMaxCards.value, 10),
@@ -368,13 +408,13 @@ function bindUIEvents() {
 
   btnStartGame.addEventListener('click', () => {
     if (!S.isHost) return;
-    socket.emit('start_game', {}, res => {
+    S.socket.emit('start_game', {}, res => {
       if (res && !res.success) toast(res.error, true);
     });
   });
 
   btnNextRound.addEventListener('click', () => {
-    socket.emit('next_round', {}, res => {
+    S.socket.emit('next_round', {}, res => {
       if (res && !res.success) { toast(res.error, true); return; }
       modalRoundSummary.classList.add('hidden');
     });
@@ -409,8 +449,15 @@ function handleJoinSuccess(res, nickname) {
   localStorage.setItem('kachuful_room',  res.roomCode);
   localStorage.setItem('kachuful_nick',  nickname);
   updateHeaderRoom(res.roomCode);
-  showScreen('lobby');
-  renderLobby(res.lobbyState);
+
+  if (res.isGameStarted && res.gameState) {
+    S.gameState = res.gameState;
+    showScreen('game');
+    renderGame(res.gameState);
+  } else {
+    showScreen('lobby');
+    renderLobby(res.lobbyState);
+  }
 }
 
 // ─── Lobby Rendering ──────────────────────────────────────────────────────────
@@ -493,7 +540,7 @@ function renderGame(state) {
   const isMyTurn = state.currentTurn === S.playerId;
 
   // 1. Bottom-Right Corner HUD (Round X/Y & TRUMP symbol)
-  if (hudRound) hudRound.textContent = `Round ${state.roundNumber}/${state.totalRounds}`;
+  if (hudRound) hudRound.textContent = `Round: ${state.roundNumber}/${state.totalRounds}`;
 
   const trump = state.trumpSuit || 'NT';
   const isRedTrump = (trump === 'H' || trump === 'D');
@@ -508,8 +555,10 @@ function renderGame(state) {
   if (hudCurrentTurn) {
     if (state.phase === 'BIDDING') {
       hudCurrentTurn.textContent = isMyTurn ? 'Your Judgement' : 'Making Judgement';
+      hudCurrentTurn.style.background = isMyTurn ? '#3ecb7f' : '#f59e0b';
     } else {
       hudCurrentTurn.textContent = isMyTurn ? 'Your Turn' : 'Round Active';
+      hudCurrentTurn.style.background = isMyTurn ? '#3ecb7f' : 'rgba(62,203,127,0.4)';
     }
   }
 
@@ -539,9 +588,15 @@ function renderGame(state) {
     ? state.currentTrick
     : (state.lastCompletedTrick?.plays || []);
 
-  const trickTargetRect = trickCardsContainer.getBoundingClientRect();
-  const targetCenterX = trickTargetRect.left + trickTargetRect.width / 2;
-  const targetCenterY = trickTargetRect.top + trickTargetRect.height / 2;
+  const arenaEl = $('table-arena') || trickCardsContainer;
+  const arenaRect = arenaEl.getBoundingClientRect();
+  const targetCenterX = arenaRect.left + arenaRect.width / 2;
+  const targetCenterY = arenaRect.top + arenaRect.height * 0.56;
+
+  // Clear animated keys on bidding phase
+  if (state.phase === 'BIDDING') {
+    S.renderedPlaysSet.clear();
+  }
 
   trickToShow.forEach((play, index) => {
     const pInfo = state.players.find(p => p.id === play.playerId);
@@ -626,6 +681,31 @@ function renderGame(state) {
     }
 
     bidHint.textContent = `Round of ${state.cardsInRound} trick${state.cardsInRound !== 1 ? 's' : ''}. How many will you win?`;
+
+    // Show other players' already-declared guesses as a player/hands table
+    const allOtherPlayers = state.players.filter(p => p.id !== S.playerId);
+    const anyBidMade = allOtherPlayers.some(p => p.bid !== null);
+    if (anyBidMade && guessPanelNamesRow && guessPanelBadgesRow) {
+      // Clear previous cells (keep the first <th> cell)
+      Array.from(guessPanelNamesRow.querySelectorAll('td')).forEach(td => td.remove());
+      Array.from(guessPanelBadgesRow.querySelectorAll('td')).forEach(td => td.remove());
+
+      // Append one <td> per other player in each row
+      allOtherPlayers.forEach(p => {
+        const nameTd = document.createElement('td');
+        nameTd.textContent = p.name;
+        guessPanelNamesRow.appendChild(nameTd);
+
+        const bidTd = document.createElement('td');
+        bidTd.textContent = p.bid !== null ? p.bid : '';
+        guessPanelBadgesRow.appendChild(bidTd);
+      });
+
+      guessPanel.classList.remove('hidden');
+    } else {
+      guessPanel.classList.add('hidden');
+    }
+
     bidButtonsGrid.innerHTML = '';
     for (let b = 0; b <= state.cardsInRound; b++) {
       const btn     = document.createElement('button');
@@ -645,6 +725,7 @@ function renderGame(state) {
     }
   } else {
     biddingTray.classList.add('hidden');
+    if (guessPanel) guessPanel.classList.add('hidden');
   }
 
   // 7. Player Hand (Cards Fan)
@@ -679,16 +760,26 @@ function renderGame(state) {
       if (canPlay) {
         cardEl.classList.add('is-playable');
         cardEl.addEventListener('click', () => {
+          if (S.isThrowingCard) return;
+          S.isThrowingCard = true;
           // Trigger smooth throw animation
           cardEl.classList.add('throwing');
+
+          const safetyTimer = setTimeout(() => {
+            cardEl.classList.remove('throwing');
+            S.isThrowingCard = false;
+          }, 1500);
+
           setTimeout(() => {
             S.socket.emit('play_card', { card }, res => {
+              clearTimeout(safetyTimer);
+              S.isThrowingCard = false;
               if (res && !res.success) {
                 cardEl.classList.remove('throwing');
                 toast(res.error, true);
               }
             });
-          }, 180);
+          }, 160);
         });
       } else {
         cardEl.classList.add('not-playable');
@@ -786,16 +877,15 @@ function renderOpponentsAroundTable(state) {
     slot.innerHTML = `
       <div class="player-avatar-widget" style="--avatar-color: ${colorBg};">
         <div class="avatar-head-circle">
-          <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="12" cy="7" r="4"/>
             <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/>
           </svg>
-          <span class="avatar-score-badge" title="Total score: ${scoreVal}">${scoreVal}</span>
-          ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
+          <div class="avatar-bid-strip">
+            <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
+          </div>
         </div>
-        <div class="avatar-bid-strip">
-          <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
-        </div>
+        ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
         ${statusPill}
         <div class="avatar-player-name">${html(p.name)}${p.isBot ? ' 🤖' : ''}</div>
       </div>
@@ -847,20 +937,19 @@ function renderSelfBadge(state) {
   playerSelfBadge.id = `slot-${me.id}`;
   playerSelfBadge.className = `player-slot slot-self${isTurn ? ' is-turn' : ''}`;
   playerSelfBadge.innerHTML = `
-    <div class="player-avatar-widget self-widget" style="--avatar-color: #3b82f6;">
+    <div class="player-avatar-widget self-widget" style="--avatar-color: #607d8b;">
       <div class="avatar-head-circle">
-        <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="avatar-head-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <circle cx="12" cy="7" r="4"/>
           <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/>
         </svg>
-        <span class="avatar-score-badge" title="Total score: ${scoreVal}">${scoreVal}</span>
-        ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
+        <div class="avatar-bid-strip">
+          <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
+        </div>
       </div>
-      <div class="avatar-bid-strip">
-        <span class="won-count">${wonLabel}</span>/<span class="bid-count">${bidLabel}</span>
-      </div>
+      ${isDealer ? '<span class="dealer-token" title="Dealer">D</span>' : ''}
       ${selfStatusPill}
-      <div class="avatar-player-name">${html(me.name)} (You)</div>
+      <div class="avatar-player-name">${html(me.name)}</div>
     </div>
   `;
 }

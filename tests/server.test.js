@@ -33,7 +33,7 @@ test('RoomManager - creates room with unique 5-char code, adds players, tracks s
 
 test('Server & Socket.IO - create_room, join_room, update_rules, and lobby_update', async () => {
   const roomManager = new RoomManager();
-  const { server } = createServerApp({ roomManager });
+  const { server, io } = createServerApp({ roomManager });
 
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
@@ -92,8 +92,9 @@ test('Server & Socket.IO - create_room, join_room, update_rules, and lobby_updat
     assert.match(nonHostRulesRes.error, /Only the host/);
 
   } finally {
-    client1.disconnect();
-    client2.disconnect();
+    client1.close();
+    client2.close();
+    io.close();
     await new Promise((resolve) => server.close(resolve));
   }
 });

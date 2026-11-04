@@ -5,7 +5,7 @@
 
 import { getLegalPlays } from './trick.js';
 
-export const BOT_NAMES = ['Bot Arya', 'Bot Kabir', 'Bot Rohan', 'Bot Diya', 'Bot Neha', 'Bot Veer', 'Bot Ananya'];
+export const BOT_NAMES = ['Bot Arya', 'Bot Kabir', 'Bot Manav', 'Bot Diya', 'Bot Neha', 'Bot Veer', 'Bot Ananya'];
 
 /**
  * Predicts a reasonable bid for a bot hand.

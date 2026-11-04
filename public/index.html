@@ -7,7 +7,7 @@
   <meta name="description" content="Play Kachuful / Judgement card game online with friends. Responsive, fast, no ads, seamless multiplayer.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -171,17 +171,38 @@
             <!-- Bidding Dialog / Tray overlay inside table -->
             <div id="bidding-tray" class="bidding-tray hidden">
               <div class="bidding-dialog">
-                <div class="bidding-title">
-                  <h3>Make Your Judgement (Call)</h3>
-                  <div id="bidding-trump-banner" class="bidding-trump-banner">
-                    <span class="bidding-trump-label">Trump:</span>
-                    <span id="bidding-trump-icon" class="bidding-trump-icon">♦</span>
-                    <span id="bidding-trump-text" class="bidding-trump-text">Diamonds</span>
-                    <div id="bidding-trump-card-preview" class="bidding-trump-card-preview hidden"></div>
-                  </div>
-                  <p id="bidding-hint">Select how many tricks you will win</p>
-                </div>
+
+                <!-- Title -->
+                <h3 class="bidding-title">Select Expected number of hands</h3>
+
+                <!-- Bid Number Buttons -->
                 <div id="bid-buttons-grid" class="bid-buttons-grid"></div>
+
+                <!-- Trump Suit row -->
+                <div id="bidding-trump-banner" class="bidding-trump-banner">
+                  <span class="bidding-trump-label">TRUMP SUIT</span>
+                  <span id="bidding-trump-icon" class="bidding-trump-icon">♦</span>
+                  <span id="bidding-trump-text" class="bidding-trump-text"></span>
+                  <div id="bidding-trump-card-preview" class="bidding-trump-card-preview hidden"></div>
+                </div>
+
+                <!-- Hint -->
+                <p id="bidding-hint" class="bidding-hint"></p>
+
+                <!-- Players guesses table -->
+                <div id="guess-panel" class="guess-panel hidden">
+                  <table class="guess-table">
+                    <tbody>
+                      <tr id="guess-panel-names-row">
+                        <th class="guess-th-label">player</th>
+                      </tr>
+                      <tr id="guess-panel-badges-row">
+                        <th class="guess-th-label">hands</th>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
             </div>
 

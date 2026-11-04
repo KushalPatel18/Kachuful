@@ -21,7 +21,9 @@ export function createServerApp(options = {}) {
   const app = express();
   const server = http.createServer(app);
   const io = new Server(server, {
-    cors: { origin: '*' }
+    cors: { origin: '*' },
+    pingInterval: 8000,
+    pingTimeout: 5000
   });
 
   const roomManager = options.roomManager || new RoomManager();
@@ -72,9 +74,20 @@ export function createServerApp(options = {}) {
       const playerObj = room.getPlayer(turnPlayerId);
       if (!playerObj || !playerObj.isBot) return;
 
-      // Human-like natural thinking delay: 1600ms - 2400ms
-      const delay = Math.floor(1600 + Math.random() * 800);
-      setTimeout(() => {
+      // Natural human-like speed:
+      // - When guessing/bidding: 1200ms - 1800ms (evaluating hand & trump)
+      // - When leading after a trick completed: 1800ms - 2400ms (allowing players to see trick winner banner)
+      // - When playing a card during a trick: 1000ms - 1500ms (natural card play pace)
+      let delay = Math.floor(1000 + Math.random() * 500);
+      if (game.phase === GAME_PHASES.BIDDING) {
+        delay = Math.floor(1200 + Math.random() * 600);
+      } else if (game.phase === GAME_PHASES.PLAYING && game.currentTrick.length === 0 && game.lastCompletedTrick) {
+        delay = Math.floor(1800 + Math.random() * 600);
+      }
+
+      if (room._botTimer) clearTimeout(room._botTimer);
+      room._botTimer = setTimeout(() => {
+        room._botTimer = null;
         try {
           if (!room.game || room.game.currentTurnPlayerId !== turnPlayerId) return;
 
@@ -125,15 +138,95 @@ export function createServerApp(options = {}) {
       }
     });
 
+    // 1b. PLAY WITH BOTS (Create room, add 3 bots, start game instantly)
+    socket.on('play_with_bots', ({ nickname }, callback) => {
+      try {
+        const cleanNick = (nickname && typeof nickname === 'string' && nickname.trim().length > 0)
+          ? nickname.trim()
+          : 'Player';
+        const room = roomManager.createRoom(socket.id, cleanNick);
+        currentRoomCode = room.code;
+        currentPlayerId = socket.id;
+        socket.join(room.code);
+
+        // Add 3 bots
+        room.addBot(socket.id);
+        room.addBot(socket.id);
+        room.addBot(socket.id);
+
+        // Start game immediately
+        room.startGame(socket.id);
+
+        const hostPlayer = room.getPlayer(socket.id);
+        const gameState = room.getPlayerGameState(socket.id);
+
+        callback?.({
+          success: true,
+          roomCode: room.code,
+          token: hostPlayer.token,
+          playerId: hostPlayer.id,
+          lobbyState: room.getLobbyState(),
+          gameState
+        });
+
+        broadcastGameState(room);
+        handleBotTurnIfNeeded(room);
+      } catch (err) {
+        callback?.({ success: false, error: err.message });
+      }
+    });
+
     // 2. JOIN ROOM
-    socket.on('join_room', ({ roomCode, nickname }, callback) => {
+    socket.on('join_room', ({ roomCode, nickname, token }, callback) => {
       try {
         const room = roomManager.getRoom(roomCode);
         if (!room) {
           return callback?.({ success: false, error: `Room "${roomCode}" not found.` });
         }
 
-        const player = room.addPlayer(socket.id, nickname);
+        // Check if player has an existing session token to reconnect
+        if (token) {
+          const existingPlayer = room.getPlayerByToken(token);
+          if (existingPlayer) {
+            const player = room.reconnectPlayer(token, socket.id);
+            currentRoomCode = room.code;
+            currentPlayerId = player.id;
+            socket.join(room.code);
+
+            const isGameStarted = !!(room.game && room.game.phase !== GAME_PHASES.NOT_STARTED);
+            const gameState = isGameStarted ? room.getPlayerGameState(player.id) : null;
+
+            callback?.({
+              success: true,
+              roomCode: room.code,
+              token: player.token,
+              playerId: player.id,
+              isGameStarted,
+              lobbyState: room.getLobbyState(),
+              gameState
+            });
+
+            if (isGameStarted) {
+              broadcastGameState(room);
+              handleBotTurnIfNeeded(room);
+            } else {
+              broadcastLobbyState(room);
+            }
+            return;
+          }
+        }
+
+        // Friendly nickname disambiguation if name taken
+        let cleanNick = (nickname || 'Player').trim().slice(0, 15);
+        if (room.players.some(p => p.name.toLowerCase() === cleanNick.toLowerCase())) {
+          let counter = 2;
+          while (room.players.some(p => p.name.toLowerCase() === `${cleanNick} ${counter}`.toLowerCase())) {
+            counter++;
+          }
+          cleanNick = `${cleanNick} ${counter}`.slice(0, 15);
+        }
+
+        const player = room.addPlayer(socket.id, cleanNick);
         currentRoomCode = room.code;
         currentPlayerId = player.id;
 
@@ -167,18 +260,47 @@ export function createServerApp(options = {}) {
         currentPlayerId = player.id;
         socket.join(room.code);
 
+        const isGameStarted = !!(room.game && room.game.phase !== GAME_PHASES.NOT_STARTED);
+        const gameState = isGameStarted ? room.getPlayerGameState(player.id) : null;
+
         callback?.({
           success: true,
           playerId: player.id,
-          isGameStarted: !!(room.game && room.game.phase !== GAME_PHASES.NOT_STARTED),
-          lobbyState: room.getLobbyState()
+          nickname: player.name,
+          isGameStarted,
+          lobbyState: room.getLobbyState(),
+          gameState
         });
 
-        if (room.game && room.game.phase !== GAME_PHASES.NOT_STARTED) {
+        if (isGameStarted) {
           broadcastGameState(room);
+          handleBotTurnIfNeeded(room);
         } else {
           broadcastLobbyState(room);
         }
+      } catch (err) {
+        callback?.({ success: false, error: err.message });
+      }
+    });
+
+    // 3b. LEAVE ROOM
+    socket.on('leave_room', (data, callback) => {
+      try {
+        if (currentRoomCode) {
+          const room = roomManager.getRoom(currentRoomCode);
+          if (room) {
+            room.disconnectPlayer(socket.id);
+            socket.leave(room.code);
+            if (room.game && room.game.phase !== GAME_PHASES.NOT_STARTED) {
+              broadcastGameState(room);
+            } else {
+              broadcastLobbyState(room);
+            }
+          }
+          currentRoomCode = null;
+          currentPlayerId = null;
+        }
+        callback?.({ success: true });
       } catch (err) {
         callback?.({ success: false, error: err.message });
       }
@@ -203,7 +325,11 @@ export function createServerApp(options = {}) {
       try {
         const room = roomManager.getRoom(currentRoomCode);
         if (!room) return callback?.({ success: false, error: 'Room not found.' });
-        room.addBot(currentPlayerId);
+        const count = Math.min(Math.max(parseInt(data?.count, 10) || 1, 1), 7);
+        for (let i = 0; i < count; i++) {
+          if (room.players.length >= room.rules.maxPlayers) break;
+          room.addBot(currentPlayerId);
+        }
         broadcastLobbyState(room);
         callback?.({ success: true, lobbyState: room.getLobbyState() });
       } catch (err) {
