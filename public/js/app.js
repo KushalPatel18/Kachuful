@@ -660,7 +660,7 @@ function renderGame(state) {
   const arenaEl = $('table-arena') || trickCardsContainer;
   const arenaRect = arenaEl.getBoundingClientRect();
   const targetCenterX = arenaRect.left + arenaRect.width / 2;
-  const targetCenterY = arenaRect.top + arenaRect.height * 0.56;
+  const targetCenterY = arenaRect.top + arenaRect.height * 0.52;
 
   // Clear animated keys on bidding phase
   if (state.phase === 'BIDDING') {
@@ -1026,36 +1026,36 @@ function renderSelfBadge(state) {
 function getTableCoordinates(idx, total) {
   // Balanced perimeter distribution around top edge of oval table
   if (total === 1) {
-    return { x: 50, y: 14 }; // Top center
+    return { x: 50, y: 13 }; // Top center
   }
   if (total === 2) {
     return [
-      { x: 20, y: 24 }, // Top-Left
-      { x: 80, y: 24 }  // Top-Right
+      { x: 22, y: 18 }, // Top-Left
+      { x: 78, y: 18 }  // Top-Right
     ][idx];
   }
   if (total === 3) {
     return [
-      { x: 16, y: 36 }, // Left
-      { x: 50, y: 14 }, // Top
-      { x: 84, y: 36 }  // Right
+      { x: 10, y: 24 }, // Top-Left (clear of Self at bottom-left)
+      { x: 50, y: 12 }, // Top-Center (clear of trick cards and status badge)
+      { x: 90, y: 24 }  // Top-Right (clear of HUD at bottom-right)
     ][idx];
   }
   if (total === 4) {
     return [
-      { x: 14, y: 44 }, // Far Left
-      { x: 34, y: 16 }, // Top Left
-      { x: 66, y: 16 }, // Top Right
-      { x: 86, y: 44 }  // Far Right
+      { x: 9,  y: 28 }, // Far Left
+      { x: 33, y: 13 }, // Top Left
+      { x: 67, y: 13 }, // Top Right
+      { x: 91, y: 28 }  // Far Right
     ][idx];
   }
-  // Up to 7 opponents distributed in a smooth arc:
-  const angleStart = Math.PI * 0.9;
-  const angleEnd   = Math.PI * 0.1;
+  // Up to 7 opponents distributed in a smooth arc around the top:
+  const angleStart = Math.PI * 0.92;
+  const angleEnd   = Math.PI * 0.08;
   const t = idx / (total - 1);
   const angle = angleStart - t * (angleStart - angleEnd);
-  const x = 50 - 36 * Math.cos(angle);
-  const y = 38 - 25 * Math.sin(angle);
+  const x = 50 - 41 * Math.cos(angle);
+  const y = 30 - 18 * Math.sin(angle);
   return { x: Math.round(x), y: Math.round(y) };
 }
 

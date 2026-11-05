@@ -787,7 +787,7 @@ input:focus, select:focus {
 /* Center Status Badge ("YOUR TURN") */
 .center-status-badge {
   position: absolute;
-  top: 38%;
+  top: 28%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: #3ecb7f;
@@ -828,8 +828,8 @@ input:focus, select:focus {
 
 .player-slot.slot-self {
   top: auto !important;
-  left: 76px !important;
-  bottom: 20px !important;
+  left: 20px !important;
+  bottom: 12px !important;
   transform: none !important;
   z-index: 25;
 }
@@ -1082,16 +1082,15 @@ input:focus, select:focus {
 /* ─── Center Trick Cards Stage ───────────────────────────────────── */
 .trick-cards-container {
   position: absolute;
-  top: 56%;
+  top: 52%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 10px;
   z-index: 15;
-  flex-wrap: wrap;
-  max-width: 90%;
+  flex-wrap: nowrap;
   pointer-events: none;
 }
 
@@ -1147,7 +1146,9 @@ input:focus, select:focus {
 /* Trick Winner Banner (Over table) */
 .trick-winner-banner {
   position: absolute;
-  top: 14px;
+  top: 34%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: linear-gradient(180deg, #fef08a 0%, #eab308 100%);
   color: #713f12;
   font-weight: 800;
@@ -1183,7 +1184,7 @@ input:focus, select:focus {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 521px) {
   .card {
     width: 66px;
     height: 96px;
@@ -1789,34 +1790,329 @@ input:focus, select:focus {
   }
 }
 
-/* Mobile compact adjustments in horizontal landscape view */
-@media screen and (orientation: landscape) and (max-height: 520px) {
+/* ─── 10. Dedicated Mobile Landscape Responsive Optimization ─────── */
+@media screen and (max-height: 520px), screen and (max-width: 950px) and (orientation: landscape) {
+  /* 1. Slim Header */
   .app-header {
-    height: 42px;
+    height: 38px;
     padding: 0 12px;
   }
+  .brand {
+    gap: 6px;
+  }
   .logo-title {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
   }
   .suits-deco {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
   }
   .header-room-pill {
-    padding: 3px 10px;
-    font-size: 0.78rem;
+    padding: 2px 8px;
+    font-size: 0.72rem;
   }
+  .btn-icon-btn, .btn-exit-btn, .btn-score-toggle {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    min-height: 28px;
+  }
+
+  /* 2. Table Arena Dimensions */
+  .table-arena {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* 3. Player Avatars (Sizing & Spacing) */
+  .player-avatar-widget {
+    min-width: 52px;
+  }
+  .avatar-head-circle {
+    width: 48px !important;
+    height: 48px !important;
+    border-width: 2px !important;
+  }
+  .avatar-head-icon {
+    width: 24px !important;
+    height: 24px !important;
+    margin-top: 2px !important;
+  }
+  .avatar-bid-strip {
+    font-size: 0.62rem !important;
+    padding: 0 4px !important;
+    height: 16px !important;
+    line-height: 16px !important;
+  }
+  .avatar-player-name {
+    font-size: 0.68rem !important;
+    max-width: 64px !important;
+    margin-top: 2px !important;
+    line-height: 1.1 !important;
+  }
+  .dealer-token {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 0.62rem !important;
+    top: -3px !important;
+    right: -2px !important;
+    border-width: 1.5px !important;
+  }
+  .avatar-turn-status {
+    font-size: 0.58rem !important;
+    padding: 1px 6px !important;
+    margin-top: 2px !important;
+  }
+  .player-slot.slot-self {
+    left: 14px !important;
+    bottom: 6px !important;
+    transform: none !important;
+  }
+
+  /* 4. Table HUD Corner (Round / Trump) */
+  .table-hud-corner {
+    right: 14px !important;
+    bottom: 6px !important;
+    gap: 3px !important;
+  }
+  .hud-round-pill {
+    font-size: 0.72rem !important;
+  }
+  .hud-trump-pill {
+    padding: 4px 10px !important;
+    gap: 5px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  }
+  .hud-trump-tag {
+    font-size: 0.68rem !important;
+  }
+  .hud-trump-icon {
+    font-size: 1.15rem !important;
+  }
+
+  /* 5. Center Status Badge ("YOUR TURN" / "Playing") */
   .center-status-badge {
-    padding: 4px 18px;
-    font-size: 0.82rem;
-    top: 36%;
+    top: 26% !important;
+    padding: 3px 14px !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 1px !important;
+    box-shadow: 0 2px 10px rgba(62, 203, 127, 0.4) !important;
+  }
+
+  /* 6. Trick Cards Container & Sizing */
+  .trick-cards-container {
+    top: 52% !important;
+    gap: 6px !important;
+    max-width: 95% !important;
+  }
+  .trick-card-wrap .card {
+    width: 44px !important;
+    height: 64px !important;
+    padding: 3px !important;
+    border-radius: 6px !important;
+  }
+  .trick-player-label {
+    font-size: 0.6rem !important;
+    padding: 1px 5px !important;
+  }
+
+  /* 7. Bottom Hand Container */
+  .player-hand-container {
+    padding: 3px 10px 5px !important;
+    border-top-width: 1px !important;
+  }
+  .hand-meta-bar {
+    margin-bottom: 2px !important;
+    font-size: 0.65rem !important;
+  }
+  .hand-count-label {
+    font-size: 0.65rem !important;
+  }
+  .hand-instruction {
+    font-size: 0.68rem !important;
+  }
+  .btn-score-toggle {
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
   }
   .player-hand {
-    min-height: 82px;
-    padding: 2px 8px;
+    min-height: 66px !important;
+    padding: 2px 6px 2px !important;
   }
+  .hand-card {
+    margin-left: -14px !important;
+  }
+  .hand-card:first-child {
+    margin-left: 0 !important;
+  }
+  .hand-card .card {
+    width: 44px !important;
+    height: 64px !important;
+    padding: 3px !important;
+    border-radius: 6px !important;
+  }
+  .card-rank {
+    font-size: 0.78rem !important;
+  }
+  .card-suit-sm {
+    font-size: 0.62rem !important;
+  }
+  .card-center {
+    font-size: 1.05rem !important;
+  }
+  .hand-card.is-playable:hover {
+    transform: translateY(-12px) !important;
+  }
+  .hand-card.throwing {
+    transform: translateY(-60px) scale(1.1) rotate(6deg) !important;
+  }
+
+  /* 8. Bidding Modal inside Table */
+  .bidding-tray {
+    padding: 6px !important;
+  }
+  .bidding-dialog {
+    padding: 10px 16px 10px !important;
+    border-radius: 14px !important;
+    max-width: 480px !important;
+    width: 95% !important;
+    max-height: 94vh !important;
+    overflow-y: auto !important;
+  }
+  .bidding-title {
+    font-size: 0.92rem !important;
+    margin-bottom: 6px !important;
+  }
+  .bid-buttons-grid {
+    gap: 5px !important;
+    margin-bottom: 6px !important;
+  }
+  .btn-bid {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 0.95rem !important;
+    border-radius: 8px !important;
+  }
+  .bidding-trump-banner {
+    padding: 3px 8px !important;
+    margin-bottom: 5px !important;
+    font-size: 0.72rem !important;
+  }
+  .bidding-trump-icon {
+    font-size: 1.1rem !important;
+  }
+  .bidding-hint {
+    font-size: 0.68rem !important;
+    margin-bottom: 4px !important;
+  }
+  .guess-panel {
+    margin-top: 4px !important;
+  }
+  .guess-table {
+    font-size: 0.68rem !important;
+  }
+  .guess-table th, .guess-table td {
+    padding: 2px 6px !important;
+  }
+
+  /* 9. Modals (Scorecard, Round Summary, Game Over) */
+  .modal-overlay {
+    padding: 8px !important;
+  }
+  .modal-card {
+    max-height: 94vh !important;
+    padding: 12px 18px !important;
+    border-radius: 14px !important;
+    max-width: 540px !important;
+  }
+  .modal-header {
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+  }
+  .modal-header h2 {
+    font-size: 1rem !important;
+  }
+  .summary-table, .scoreboard-table {
+    font-size: 0.75rem !important;
+    margin-bottom: 8px !important;
+  }
+  .summary-table th, .summary-table td,
+  .scoreboard-table th, .scoreboard-table td {
+    padding: 3px 6px !important;
+  }
+  .btn-large {
+    min-height: 36px !important;
+    padding: 6px 14px !important;
+    font-size: 0.85rem !important;
+  }
+  .game-over-banner {
+    padding: 6px !important;
+    margin-bottom: 6px !important;
+  }
+  .trophy-icon {
+    font-size: 2rem !important;
+  }
+  .game-over-banner h2 {
+    font-size: 1.15rem !important;
+  }
+  .game-over-banner p {
+    font-size: 0.82rem !important;
+  }
+
+  /* 10. Home & Lobby screens */
   .hero-card {
-    padding: 20px 24px;
-    max-height: 90vh;
-    overflow-y: auto;
+    max-height: 92vh !important;
+    padding: 14px 18px !important;
+    max-width: 440px !important;
+    overflow-y: auto !important;
+  }
+  .app-logo-badge {
+    font-size: 1.8rem !important;
+    margin-bottom: 2px !important;
+  }
+  .hero-header {
+    margin-bottom: 8px !important;
+  }
+  .hero-header h2 {
+    font-size: 1.2rem !important;
+  }
+  .hero-header p {
+    font-size: 0.75rem !important;
+    margin-top: 2px !important;
+  }
+  .form-group {
+    margin-bottom: 8px !important;
+  }
+  .form-group label {
+    font-size: 0.68rem !important;
+    margin-bottom: 3px !important;
+  }
+  input[type="text"], input[type="number"], select {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+  }
+  .actions-split {
+    gap: 8px !important;
+  }
+  .divider-text {
+    margin: 8px 0 !important;
+    font-size: 0.7rem !important;
+  }
+  .lobby-card {
+    max-height: 94vh !important;
+    overflow-y: auto !important;
+  }
+  .lobby-header {
+    padding: 10px 16px !important;
+  }
+  .code-badge {
+    font-size: 1.1rem !important;
+    padding: 2px 10px !important;
+  }
+  .panel {
+    padding: 12px 16px !important;
   }
 }
