@@ -660,7 +660,7 @@ function renderGame(state) {
   const arenaEl = $('table-arena') || trickCardsContainer;
   const arenaRect = arenaEl.getBoundingClientRect();
   const targetCenterX = arenaRect.left + arenaRect.width / 2;
-  const targetCenterY = arenaRect.top + arenaRect.height * 0.52;
+  const targetCenterY = arenaRect.top + arenaRect.height * 0.60;
 
   // Clear animated keys on bidding phase
   if (state.phase === 'BIDDING') {
