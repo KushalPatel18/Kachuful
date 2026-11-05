@@ -98,3 +98,28 @@ test('Server & Socket.IO - create_room, join_room, update_rules, and lobby_updat
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test('HTTP Routes - GET / serves public/index.html, /api/network-info returns network details', async () => {
+  const { server } = createServerApp();
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+
+  try {
+    // 1. GET /
+    const rootRes = await fetch(`http://localhost:${port}/`);
+    assert.equal(rootRes.status, 200);
+    const html = await rootRes.text();
+    assert.ok(html.includes('Kachuful / Judgement Online'));
+    assert.ok(html.includes('app-container'));
+
+    // 2. GET /api/network-info
+    const netRes = await fetch(`http://localhost:${port}/api/network-info`);
+    assert.equal(netRes.status, 200);
+    const netData = await netRes.json();
+    assert.ok(netData.localIp);
+    assert.equal(netData.port, port);
+    assert.ok(netData.lanUrl);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

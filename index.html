@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kachuful / Judgement Online</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .card {
+      background: #1e293b;
+      padding: 32px 24px;
+      border-radius: 18px;
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.5);
+      max-width: 440px;
+      width: 90%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 1.6rem;
+      color: #fbbf24;
+      font-weight: 800;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin: 0 0 20px 0;
+    }
+    .url-chip {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: monospace;
+      color: #38bdf8;
+      font-size: 0.95rem;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    a.btn {
+      display: inline-block;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+  </style>
+  <script>
+    // Automatic self-healing redirect:
+    // If opened via IDE preview on port 3000, jump directly to the active Kachuful server on port 3005
+    (function() {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      const hostname = window.location.hostname || 'localhost';
+      const port = window.location.port;
+
+      if (port === '3000') {
+        window.location.replace('http://' + hostname + ':3005/' + search + hash);
+      } else {
+        window.location.replace('/public/' + search + hash);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h1>♠️ Kachuful Online ♥️</h1>
+    <p>Connecting to game table server...</p>
+    <div class="url-chip" id="target-url">http://localhost:3005</div>
+    <div>
+      <a id="btn-launch" href="http://localhost:3005" class="btn">Launch Game Table 🚀</a>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const hostname = window.location.hostname || 'localhost';
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      const url = 'http://' + hostname + ':3005/' + search + hash;
+      const chip = document.getElementById('target-url');
+      const btn = document.getElementById('btn-launch');
+      if (chip) chip.textContent = url;
+      if (btn) btn.href = url;
+    })();
+  </script>
+</body>
+</html>

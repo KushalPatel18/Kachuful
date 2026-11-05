@@ -576,6 +576,25 @@ input:focus, select:focus {
   color: #94a3b8;
 }
 
+.lobby-wifi-tip {
+  margin-top: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  color: #93c5fd;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lobby-wifi-tip strong {
+  color: #60a5fa;
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
 .lobby-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

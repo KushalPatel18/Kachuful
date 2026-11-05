@@ -6,6 +6,7 @@
  */
 
 import http from 'node:http';
+import os from 'node:os';
 import express from 'express';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'node:url';
@@ -30,12 +31,49 @@ export function createServerApp(options = {}) {
 
   // Serve static files from public directory
   const publicDir = join(__dirname, '../../public');
+
+  // Explicitly ensure root / serves public/index.html
+  app.get('/', (req, res) => {
+    res.sendFile(join(publicDir, 'index.html'));
+  });
+
+  // Handle /public redirects gracefully
+  app.get('/public', (req, res) => {
+    res.redirect('/');
+  });
+
   app.use(express.static(publicDir));
   app.use(express.json());
 
   // Health / API status
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', activeRooms: roomManager.rooms.size });
+  });
+
+  // Local network / LAN IP info so clients can generate phone-friendly invite links
+  app.get('/api/network-info', (req, res) => {
+    let localIp = 'localhost';
+    try {
+      const interfaces = os.networkInterfaces();
+      for (const name of Object.keys(interfaces)) {
+        for (const net of interfaces[name]) {
+          if (net.family === 'IPv4' && !net.internal) {
+            localIp = net.address;
+            break;
+          }
+        }
+        if (localIp !== 'localhost') break;
+      }
+    } catch (_) {}
+
+    const addr = server.address();
+    const port = (addr && typeof addr === 'object') ? addr.port : 3000;
+
+    res.json({
+      localIp,
+      port,
+      lanUrl: localIp !== 'localhost' ? `http://${localIp}:${port}` : `http://localhost:${port}`
+    });
   });
 
   // Socket.IO real-time event router

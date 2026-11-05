@@ -154,16 +154,79 @@ function copyFallback(text) {
   }
 }
 
-function copyRoomLink() {
+let serverNetworkInfo = null;
+
+async function fetchNetworkInfo() {
+  try {
+    const res = await fetch('/api/network-info');
+    if (res.ok) {
+      serverNetworkInfo = await res.json();
+      updateLobbyInviteLinks();
+    }
+  } catch (_) {}
+}
+
+function updateLobbyInviteLinks() {
+  const wifiTip = $('lobby-wifi-tip');
+  const wifiUrl = $('lobby-wifi-url');
+  if (wifiTip && wifiUrl && serverNetworkInfo?.localIp && serverNetworkInfo.localIp !== 'localhost') {
+    wifiUrl.textContent = `${serverNetworkInfo.lanUrl}/?room=${S.roomCode || 'CODE'}`;
+    wifiTip.classList.remove('hidden');
+  }
+}
+
+function copyRoomLink(forceMobile = false) {
   if (!S.roomCode) return;
-  const url = `${location.origin}/?room=${S.roomCode}`;
+  const isLocalHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  let baseUrl = location.origin;
+
+  if (forceMobile || (isLocalHost && serverNetworkInfo?.localIp && serverNetworkInfo.localIp !== 'localhost')) {
+    baseUrl = serverNetworkInfo?.lanUrl || baseUrl;
+  }
+
+  const url = `${baseUrl}/?room=${S.roomCode}`;
+  const isMobileShare = (baseUrl !== location.origin);
+
   if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
     navigator.clipboard.writeText(url)
-      .then(() => toast('Invite link copied!'))
+      .then(() => toast(isMobileShare ? `📱 Phone/Wi-Fi link copied! (${serverNetworkInfo?.localIp || 'LAN'})` : 'Invite link copied!'))
       .catch(() => copyFallback(url));
   } else {
     copyFallback(url);
   }
+}
+
+function showStaticServerNotice() {
+  if ($('server-offline-modal')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'server-offline-modal';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 999999;
+    background: rgba(10, 15, 30, 0.94); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  `;
+  overlay.innerHTML = `
+    <div style="background: #1e293b; border: 2px solid #3b82f6; border-radius: 20px; padding: 32px 24px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); color: #f8fafc;">
+      <div style="font-size: 3rem; margin-bottom: 12px;">♠️ ♥️ ♣️ ♦️</div>
+      <h2 style="margin: 0 0 10px 0; font-size: 1.5rem; color: #fbbf24; font-weight: 800;">Start Kachuful Game Server</h2>
+      <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px;">
+        This page was opened via a static preview (like VS Code Live Preview) instead of the Node.js game server.
+      </p>
+      <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-bottom: 20px; text-align: left;">
+        <div style="color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Run in Terminal:</div>
+        <code style="color: #38bdf8; font-family: monospace; font-size: 1.05rem; font-weight: bold;">npm start</code>
+      </div>
+      <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 24px;">
+        After starting the server, click Reload to connect!
+      </p>
+      <button id="btn-reload-after-start" style="background: #3b82f6; color: white; border: none; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer;">
+        Reload Table 🔄
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('btn-reload-after-start')?.addEventListener('click', () => location.reload());
 }
 
 function sanitizeRoomCode(val) {
@@ -193,6 +256,13 @@ function makeCard(card) {
 
 // ─── Socket Initialization ────────────────────────────────────────────────────
 function init() {
+  if (typeof io === 'undefined') {
+    showStaticServerNotice();
+    return;
+  }
+
+  fetchNetworkInfo();
+
   S.socket = io({
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -292,6 +362,16 @@ function bindSocketEvents() {
   // Auto re-sync session on any reconnect without page reload
   socket.on('connect', () => {
     attemptSessionReconnect();
+  });
+
+  socket.on('disconnect', (reason) => {
+    if (reason !== 'io client disconnect') {
+      toast('Disconnected from server. Reconnecting...', true);
+    }
+  });
+
+  socket.on('connect_error', () => {
+    // Socket connection error
   });
 
   socket.on('lobby_update', state => {
@@ -491,8 +571,12 @@ function bindUIEvents() {
     });
   });
 
-  $('btn-copy-code').addEventListener('click', copyRoomLink);
-  $('btn-copy-link').addEventListener('click', copyRoomLink);
+  $('btn-copy-code').addEventListener('click', () => copyRoomLink(false));
+  $('btn-copy-link').addEventListener('click', () => copyRoomLink(false));
+  const btnCopyMobile = $('btn-copy-mobile-link');
+  if (btnCopyMobile) {
+    btnCopyMobile.addEventListener('click', () => copyRoomLink(true));
+  }
 
   // Scorecard toggle buttons
   const toggleScorecard = () => {
@@ -603,6 +687,7 @@ function renderLobby(state) {
   if (!state) return;
   lobbyRoomCode.textContent    = state.roomCode;
   lobbyPlayerCount.textContent = state.players.length;
+  updateLobbyInviteLinks();
 
   S.isHost = state.hostId === S.playerId;
 
