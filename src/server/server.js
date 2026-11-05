@@ -82,7 +82,7 @@ export function createServerApp(options = {}) {
       if (game.phase === GAME_PHASES.BIDDING) {
         delay = Math.floor(1200 + Math.random() * 600);
       } else if (game.phase === GAME_PHASES.PLAYING && game.currentTrick.length === 0 && game.lastCompletedTrick) {
-        delay = Math.floor(1800 + Math.random() * 600);
+        delay = Math.floor(2200 + Math.random() * 600);
       }
 
       if (room._botTimer) clearTimeout(room._botTimer);

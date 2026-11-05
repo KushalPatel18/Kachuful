@@ -26,6 +26,7 @@ const S = {
   gameState: null,
   renderedPlaysSet: new Set(),
   roundSummaryDelayTimer: null,
+  trickWinnerTimer: null,
   isThrowingCard: false
 };
 
@@ -667,6 +668,8 @@ function renderGame(state) {
     S.renderedPlaysSet.clear();
   }
 
+  let hasNewPlayInTrick = false;
+
   trickToShow.forEach((play, index) => {
     const pInfo = state.players.find(p => p.id === play.playerId);
     const wrap  = document.createElement('div');
@@ -694,6 +697,7 @@ function renderGame(state) {
     const playKey = `${state.roundNumber}_${play.playerId}_${play.card.suit}${play.card.rank}_${index}`;
     const isNewPlay = !S.renderedPlaysSet.has(playKey);
     if (isNewPlay) {
+      hasNewPlayInTrick = true;
       S.renderedPlaysSet.add(playKey);
       wrap.classList.add('animating-entry');
 
@@ -717,14 +721,43 @@ function renderGame(state) {
   });
 
   // 5. Trick Winner Banner (Shown after trick completes during playing or round ended)
-  if (state.lastCompletedTrick && state.currentTrick.length === 0 && (state.phase === 'PLAYING' || state.phase === 'ROUND_ENDED' || state.phase === 'GAME_OVER')) {
-    const winnerInfo = state.players.find(p => p.id === state.lastCompletedTrick.winner.playerId);
+  if (S.trickWinnerTimer) {
+    clearTimeout(S.trickWinnerTimer);
+    S.trickWinnerTimer = null;
+  }
+
+  const isTrickComplete = !!(state.lastCompletedTrick && state.currentTrick.length === 0 && (state.phase === 'PLAYING' || state.phase === 'ROUND_ENDED' || state.phase === 'GAME_OVER'));
+
+  if (isTrickComplete) {
+    const winnerId = state.lastCompletedTrick.winner?.playerId;
+    const winnerInfo = state.players.find(p => p.id === winnerId);
     trickWinnerText.textContent = winnerInfo
       ? `🏆 ${winnerInfo.name} takes the trick!`
       : 'Trick complete!';
-    trickWinnerBanner.classList.remove('hidden');
+
+    // Hide normal turn badge so it does not clutter or compete for vertical space
+    if (hudCurrentTurn) hudCurrentTurn.classList.add('hidden');
+
+    const displayWinner = () => {
+      trickWinnerBanner.classList.remove('hidden');
+      if (winnerId) {
+        const winnerCardWrap = trickCardsContainer.querySelector(`[data-player-id="${winnerId}"]`);
+        if (winnerCardWrap) {
+          winnerCardWrap.classList.add('is-trick-winner');
+        }
+      }
+    };
+
+    if (hasNewPlayInTrick) {
+      // Keep banner hidden for 700ms so last player's card finishes animating and is clearly seen
+      trickWinnerBanner.classList.add('hidden');
+      S.trickWinnerTimer = setTimeout(displayWinner, 700);
+    } else {
+      displayWinner();
+    }
   } else {
     trickWinnerBanner.classList.add('hidden');
+    if (hudCurrentTurn) hudCurrentTurn.classList.remove('hidden');
   }
 
   // 6. Bidding Dialog / Tray
