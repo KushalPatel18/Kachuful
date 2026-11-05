@@ -137,12 +137,43 @@ function updateHeaderRoom(code) {
   }
 }
 
+function copyFallback(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Invite link copied!');
+  } catch (e) {
+    prompt('Copy room link:', text);
+  }
+}
+
 function copyRoomLink() {
   if (!S.roomCode) return;
   const url = `${location.origin}/?room=${S.roomCode}`;
-  navigator.clipboard.writeText(url)
-    .then(() => toast('Invite link copied!'))
-    .catch(() => toast(url));
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    navigator.clipboard.writeText(url)
+      .then(() => toast('Invite link copied!'))
+      .catch(() => copyFallback(url));
+  } else {
+    copyFallback(url);
+  }
+}
+
+function sanitizeRoomCode(val) {
+  if (!val) return '';
+  let str = String(val).trim();
+  const match = str.match(/[?&]room=([A-Za-z0-9]+)/i);
+  if (match) return match[1].toUpperCase();
+  const pathMatch = str.match(/\/([A-Za-z0-9]{4,6})(?:[/?#]|$)/);
+  if (pathMatch) return pathMatch[1].toUpperCase();
+  return str.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
 }
 
 // ─── Card Rendering ───────────────────────────────────────────────────────────
@@ -179,8 +210,27 @@ function init() {
 
   const urlCode = new URLSearchParams(location.search).get('room');
   if (urlCode) {
-    const cleanUrlCode = urlCode.trim().toUpperCase();
+    const cleanUrlCode = sanitizeRoomCode(urlCode);
     inputRoomCode.value = cleanUrlCode;
+
+    const inviteBanner = $('invite-detected-banner');
+    const invitePill = $('invite-code-pill');
+    if (inviteBanner && invitePill) {
+      invitePill.textContent = cleanUrlCode;
+      inviteBanner.classList.remove('hidden');
+    }
+
+    // Highlight Join action as primary for invited friend
+    const btnJoin = $('btn-join-room');
+    const btnCreate = $('btn-create-room');
+    if (btnJoin && btnCreate) {
+      btnJoin.classList.remove('btn-secondary');
+      btnJoin.classList.add('btn-primary');
+      btnJoin.textContent = `Join ${cleanUrlCode} 🚀`;
+      btnCreate.classList.remove('btn-primary');
+      btnCreate.classList.add('btn-secondary');
+    }
+
     // If joining a different room via link, clear stale saved room
     if (localStorage.getItem('kachuful_room') && localStorage.getItem('kachuful_room') !== cleanUrlCode) {
       localStorage.removeItem('kachuful_room');
@@ -224,6 +274,12 @@ function attemptSessionReconnect() {
       } else {
         localStorage.removeItem('kachuful_token');
         localStorage.removeItem('kachuful_room');
+        S.roomCode = null;
+        S.token = null;
+        S.gameState = null;
+        updateHeaderRoom(null);
+        showScreen('home');
+        toast('Previous room expired or server restarted. Please host or join a new game.', true);
       }
     });
   }
@@ -402,9 +458,21 @@ function bindUIEvents() {
     });
   }
 
+  // Sanitize room code on input and paste (handles full URLs and extra spaces automatically)
+  inputRoomCode.addEventListener('input', () => {
+    inputRoomCode.value = sanitizeRoomCode(inputRoomCode.value);
+  });
+
+  inputRoomCode.addEventListener('paste', () => {
+    setTimeout(() => {
+      inputRoomCode.value = sanitizeRoomCode(inputRoomCode.value);
+    }, 0);
+  });
+
   $('btn-join-room').addEventListener('click', () => {
     const nickname = inputNickname.value.trim();
-    const roomCode = inputRoomCode.value.trim().toUpperCase();
+    const roomCode = sanitizeRoomCode(inputRoomCode.value);
+    inputRoomCode.value = roomCode;
     if (!nickname) { toast('Enter your player name.', true); return; }
     if (!roomCode) { toast('Enter a room code.', true); return; }
 

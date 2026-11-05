@@ -181,7 +181,8 @@ export function createServerApp(options = {}) {
       try {
         const room = roomManager.getRoom(roomCode);
         if (!room) {
-          return callback?.({ success: false, error: `Room "${roomCode}" not found.` });
+          const displayCode = String(roomCode || '').trim().toUpperCase();
+          return callback?.({ success: false, error: `Room "${displayCode}" not found. Please verify the code or host a new game.` });
         }
 
         // Check if player has an existing session token to reconnect

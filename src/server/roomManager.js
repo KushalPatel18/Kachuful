@@ -286,7 +286,13 @@ export class RoomManager {
 
   getRoom(code) {
     if (!code) return null;
-    const normalized = code.trim().toUpperCase();
+    let normalized = String(code).trim().toUpperCase();
+    const queryMatch = normalized.match(/[?&]ROOM=([A-Z0-9]+)/i);
+    if (queryMatch) {
+      normalized = queryMatch[1];
+    } else {
+      normalized = normalized.replace(/[^A-Z0-9]/g, '');
+    }
     return this.rooms.get(normalized) || null;
   }
 
