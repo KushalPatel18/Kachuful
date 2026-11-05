@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Kachuful / Judgement Online</title>
   <meta name="description" content="Play Kachuful / Judgement card game online with friends. Responsive, fast, no ads, seamless multiplayer.">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Judgement">
+  <meta name="theme-color" content="#1a2b5e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
@@ -305,6 +313,29 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- Dedicated Mobile Portrait Orientation Prompt -->
+  <div id="rotate-prompt" class="rotate-prompt-overlay" aria-live="polite">
+    <div class="rotate-card">
+      <div class="rotate-phone-anim">
+        <div class="phone-device">
+          <div class="phone-speaker"></div>
+          <div class="phone-screen">
+            <span class="phone-card-suit">♠</span>
+          </div>
+          <div class="phone-home-line"></div>
+        </div>
+        <div class="rotate-arrow-badge">🔄</div>
+      </div>
+      <h2 class="rotate-title">Landscape Mode Required</h2>
+      <p class="rotate-desc">
+        Judgement table is designed for <strong>horizontal landscape view</strong>. Rotate your device or tap below.
+      </p>
+      <button id="btn-force-landscape" class="btn btn-primary btn-rotate-action">
+        <span class="btn-icon-lead">📱</span> Enter Landscape Fullscreen
+      </button>
+    </div>
   </div>
 
   <script src="/js/app.js" type="module"></script>

@@ -169,6 +169,13 @@ function init() {
     timeout: 10000
   });
 
+  // If opened directly as installed standalone PWA on mobile, lock orientation directly
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    if (window.screen && screen.orientation && typeof screen.orientation.lock === 'function') {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  }
+
   const urlCode = new URLSearchParams(location.search).get('room');
   if (urlCode) {
     const cleanUrlCode = urlCode.trim().toUpperCase();
@@ -284,8 +291,70 @@ function bindSocketEvents() {
   });
 }
 
+// ─── Mobile Orientation Lock & Fullscreen ────────────────────────────────────
+async function tryLockLandscape() {
+  // 1. If supported directly (e.g. standalone PWA on Android)
+  try {
+    if (window.screen && screen.orientation && typeof screen.orientation.lock === 'function') {
+      await screen.orientation.lock('landscape');
+      return true;
+    }
+  } catch (e) {
+    // Requires fullscreen in mobile browser tabs
+  }
+
+  // 2. Request fullscreen first then lock orientation (standard for Chrome Android)
+  try {
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      await el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+      await el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+      await el.mozRequestFullScreen();
+    } else if (el.msRequestFullscreen) {
+      await el.msRequestFullscreen();
+    }
+
+    if (window.screen && screen.orientation && typeof screen.orientation.lock === 'function') {
+      await screen.orientation.lock('landscape');
+      return true;
+    }
+  } catch (e) {
+    // Unsupported or permission blocked (e.g. Safari iOS)
+  }
+  return false;
+}
+
 // ─── UI Event Bindings ────────────────────────────────────────────────────────
 function bindUIEvents() {
+  // Force landscape action from mobile portrait prompt
+  const btnForceLandscape = $('btn-force-landscape');
+  if (btnForceLandscape) {
+    btnForceLandscape.addEventListener('click', async () => {
+      await tryLockLandscape();
+    });
+  }
+
+  const rotatePrompt = $('rotate-prompt');
+  if (rotatePrompt) {
+    rotatePrompt.addEventListener('click', (e) => {
+      if (e.target && e.target.id !== 'btn-force-landscape') {
+        tryLockLandscape();
+      }
+    });
+  }
+
+  // Auto-attempt landscape lock when starting or joining game
+  ['btn-create-room', 'btn-play-bots', 'btn-join-room', 'btn-start-game'].forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.addEventListener('click', () => {
+        tryLockLandscape();
+      });
+    }
+  });
+
   $('btn-create-room').addEventListener('click', () => {
     const nickname = inputNickname.value.trim();
     if (!nickname) { toast('Enter your player name.', true); return; }

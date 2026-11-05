@@ -1,0 +1,19 @@
+{
+  "name": "Kachuful / Judgement Online",
+  "short_name": "Judgement",
+  "description": "Play Kachuful / Judgement card game online with friends. Responsive, fast, no ads, seamless multiplayer.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1a2b5e",
+  "theme_color": "#1a2b5e",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}

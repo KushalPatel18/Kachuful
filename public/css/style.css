@@ -81,6 +81,9 @@ body {
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .hidden {
@@ -1621,4 +1624,199 @@ input:focus, select:focus {
 .toast-error {
   background: rgba(220, 38, 38, 0.92);
   border-color: rgba(248, 113, 113, 0.4);
+}
+
+/* ─── 9. Mobile Screen Orientation & Rotate Prompt ────────────────── */
+#rotate-prompt {
+  display: none;
+}
+
+@media screen and (orientation: portrait) and (max-width: 900px) {
+  #rotate-prompt {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: radial-gradient(circle at center, #1e2c5a 0%, #0c1228 100%);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .rotate-card {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 24px;
+    padding: 32px 24px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 35px rgba(245, 158, 11, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: rotateCardFade 0.35s ease-out;
+  }
+
+  @keyframes rotateCardFade {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .rotate-phone-anim {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phone-device {
+    width: 50px;
+    height: 84px;
+    border: 3px solid #f59e0b;
+    border-radius: 12px;
+    background: #0f172a;
+    position: relative;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+    animation: phoneRotateAnim 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transform-origin: center center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 4px;
+  }
+
+  .phone-speaker {
+    width: 14px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+  }
+
+  .phone-screen {
+    flex: 1;
+    width: 100%;
+    background: linear-gradient(135deg, #1a2b5e, #101c3d);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0;
+  }
+
+  .phone-card-suit {
+    color: #f59e0b;
+    font-size: 1.3rem;
+  }
+
+  .phone-home-line {
+    width: 18px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+  }
+
+  .rotate-arrow-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    background: #f59e0b;
+    color: #000;
+    font-size: 1.1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: arrowPulse 2.8s ease-in-out infinite;
+  }
+
+  @keyframes phoneRotateAnim {
+    0%, 20% {
+      transform: rotate(0deg);
+    }
+    45%, 75% {
+      transform: rotate(-90deg);
+    }
+    95%, 100% {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes arrowPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+  }
+
+  .rotate-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 8px;
+  }
+
+  .rotate-desc {
+    font-size: 0.88rem;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin-bottom: 22px;
+  }
+
+  .rotate-desc strong {
+    color: #38bdf8;
+  }
+
+  .btn-rotate-action {
+    width: 100%;
+    padding: 13px 20px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.4);
+  }
+}
+
+/* Mobile compact adjustments in horizontal landscape view */
+@media screen and (orientation: landscape) and (max-height: 520px) {
+  .app-header {
+    height: 42px;
+    padding: 0 12px;
+  }
+  .logo-title {
+    font-size: 1.05rem;
+  }
+  .suits-deco {
+    font-size: 0.82rem;
+  }
+  .header-room-pill {
+    padding: 3px 10px;
+    font-size: 0.78rem;
+  }
+  .center-status-badge {
+    padding: 4px 18px;
+    font-size: 0.82rem;
+    top: 36%;
+  }
+  .player-hand {
+    min-height: 82px;
+    padding: 2px 8px;
+  }
+  .hero-card {
+    padding: 20px 24px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
 }
